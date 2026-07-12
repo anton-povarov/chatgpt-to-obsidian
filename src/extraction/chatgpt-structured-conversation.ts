@@ -1,8 +1,11 @@
-import type { CollectionResult, ConversationDraft } from '../domain/conversation-draft';
-import type { Exchange } from '../domain/conversation-snapshot';
+import type {
+  CollectionResult,
+  ConversationDraft,
+} from "../domain/conversation-draft";
+import type { Exchange } from "../domain/conversation-snapshot";
 
 interface StructuredMessage {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   markdown: string;
   createdAt?: number;
   model?: string;
@@ -18,7 +21,7 @@ interface ParsedConversation {
 interface NormalizedNodeMessage {
   message?: StructuredMessage;
   unsupportedContent: boolean;
-  outcome: 'parsed' | 'partial' | 'skipped' | 'ignored';
+  outcome: "parsed" | "partial" | "skipped" | "ignored";
   reasons: string[];
 }
 
@@ -31,7 +34,12 @@ export interface StructuredMessageDiagnostic {
   nodeId: string;
   role?: string;
   contentType?: string;
-  outcome: 'parsed' | 'partial' | 'skipped' | 'ignored' | 'outside-visible-branch';
+  outcome:
+    | "parsed"
+    | "partial"
+    | "skipped"
+    | "ignored"
+    | "outside-visible-branch";
   reasons: string[];
 }
 
@@ -45,9 +53,12 @@ export interface StructuredConversationDebugLog {
   conversationResponse: unknown;
 }
 
-type FetchFunction = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+type FetchFunction = (
+  input: RequestInfo | URL,
+  init?: RequestInit,
+) => Promise<Response>;
 
-const IGNORED_INTERNAL_CONTENT_TYPES = new Set(['model_editable_context']);
+const IGNORED_INTERNAL_CONTENT_TYPES = new Set(["model_editable_context"]);
 
 export async function collectChatGptStructuredConversation(
   document: Document,
@@ -56,36 +67,49 @@ export async function collectChatGptStructuredConversation(
 ): Promise<CollectionResult> {
   const conversationId = extractConversationId(document.location.href);
   if (!conversationId) {
-    throw new Error('The current page URL does not contain a ChatGPT Conversation ID.');
+    throw new Error(
+      "The current page URL does not contain a ChatGPT Conversation ID.",
+    );
   }
 
-  const accessToken = await fetchSessionAccessToken(document.location.origin, fetchFunction);
+  const accessToken = await fetchSessionAccessToken(
+    document.location.origin,
+    fetchFunction,
+  );
   const endpoint = new URL(
     `/backend-api/conversation/${encodeURIComponent(conversationId)}`,
     document.location.origin,
   );
   const response = await fetchFunction(endpoint, {
-    method: 'GET',
-    credentials: 'include',
+    method: "GET",
+    credentials: "include",
     headers: {
-      accept: 'application/json',
+      accept: "application/json",
       authorization: `Bearer ${accessToken}`,
     },
   });
 
   if (!response.ok) {
     if (response.status === 429) {
-      const retryAdvice = formatRetryAdvice(response.headers.get('retry-after'));
-      throw new Error(`ChatGPT structured conversation request was rate limited.${retryAdvice}`);
+      const retryAdvice = formatRetryAdvice(
+        response.headers.get("retry-after"),
+      );
+      throw new Error(
+        `ChatGPT structured conversation request was rate limited.${retryAdvice}`,
+      );
     }
-    throw new Error(`ChatGPT structured conversation request failed with status ${response.status}.`);
+    throw new Error(
+      `ChatGPT structured conversation request failed with status ${response.status}.`,
+    );
   }
 
   let payload: unknown;
   try {
     payload = await response.json();
   } catch {
-    throw new Error('ChatGPT returned a non-JSON structured conversation response.');
+    throw new Error(
+      "ChatGPT returned a non-JSON structured conversation response.",
+    );
   }
 
   let parsed: ParsedConversation;
@@ -93,45 +117,66 @@ export async function collectChatGptStructuredConversation(
     parsed = parseChatGptConversationGraph(payload, document.location.href);
   } catch (error) {
     onDebugLog?.(
-      createDebugLog(payload, document.location.href, [], error instanceof Error ? error.message : 'Structured parsing failed.'),
+      createDebugLog(
+        payload,
+        document.location.href,
+        [],
+        error instanceof Error ? error.message : "Structured parsing failed.",
+      ),
     );
     throw error;
   }
-  onDebugLog?.(createDebugLog(payload, document.location.href, parsed.messageDiagnostics));
+  onDebugLog?.(
+    createDebugLog(payload, document.location.href, parsed.messageDiagnostics),
+  );
   if (parsed.draft.exchanges.length === 0 && parsed.warnings.length === 0) {
-    throw new Error('ChatGPT structured conversation data contained no complete Exchanges.');
+    throw new Error(
+      "ChatGPT structured conversation data contained no complete Exchanges.",
+    );
   }
 
-  return { ...parsed, method: 'structured-data' };
+  return { ...parsed, method: "structured-data" };
 }
 
 async function fetchSessionAccessToken(
   origin: string,
   fetchFunction: FetchFunction,
 ): Promise<string> {
-  const response = await fetchFunction(new URL('/api/auth/session', origin), {
-    method: 'GET',
-    credentials: 'include',
-    headers: { accept: 'application/json' },
+  const response = await fetchFunction(new URL("/api/auth/session", origin), {
+    method: "GET",
+    credentials: "include",
+    headers: { accept: "application/json" },
   });
 
   if (!response.ok) {
     if (response.status === 429) {
-      const retryAdvice = formatRetryAdvice(response.headers.get('retry-after'));
-      throw new Error(`ChatGPT session request was rate limited.${retryAdvice}`);
+      const retryAdvice = formatRetryAdvice(
+        response.headers.get("retry-after"),
+      );
+      throw new Error(
+        `ChatGPT session request was rate limited.${retryAdvice}`,
+      );
     }
-    throw new Error(`ChatGPT session request failed with status ${response.status}.`);
+    throw new Error(
+      `ChatGPT session request failed with status ${response.status}.`,
+    );
   }
 
   let payload: unknown;
   try {
     payload = await response.json();
   } catch {
-    throw new Error('ChatGPT returned a non-JSON session response.');
+    throw new Error("ChatGPT returned a non-JSON session response.");
   }
 
-  if (!isRecord(payload) || typeof payload.accessToken !== 'string' || !payload.accessToken) {
-    throw new Error('The active ChatGPT session did not provide an access token.');
+  if (
+    !isRecord(payload) ||
+    typeof payload.accessToken !== "string" ||
+    !payload.accessToken
+  ) {
+    throw new Error(
+      "The active ChatGPT session did not provide an access token.",
+    );
   }
 
   return payload.accessToken;
@@ -141,8 +186,14 @@ export function parseChatGptConversationGraph(
   payload: unknown,
   sourceUrl: string,
 ): ParsedConversation {
-  if (!isRecord(payload) || !isRecord(payload.mapping) || typeof payload.current_node !== 'string') {
-    throw new Error('ChatGPT structured conversation data has an unsupported shape.');
+  if (
+    !isRecord(payload) ||
+    !isRecord(payload.mapping) ||
+    typeof payload.current_node !== "string"
+  ) {
+    throw new Error(
+      "ChatGPT structured conversation data has an unsupported shape.",
+    );
   }
 
   const nodes = traceCurrentBranch(payload.mapping, payload.current_node);
@@ -168,14 +219,15 @@ export function parseChatGptConversationGraph(
       messageDiagnostics.push({
         nodeId,
         ...readMessageIdentity(node),
-        outcome: 'outside-visible-branch',
-        reasons: ['Node is not on the ancestor path from current_node.'],
+        outcome: "outside-visible-branch",
+        reasons: ["Node is not on the ancestor path from current_node."],
       });
     }
   }
 
   if (unsupportedContentMessages > 0) {
-    const retainedMessages = unsupportedContentMessages - skippedUnsupportedMessages;
+    const retainedMessages =
+      unsupportedContentMessages - skippedUnsupportedMessages;
     warnings.push(
       formatUnsupportedContentWarning(
         unsupportedContentMessages,
@@ -185,23 +237,24 @@ export function parseChatGptConversationGraph(
     );
   }
 
-  const { exchanges, unpairedMessages, incompleteMessages } = pairStructuredMessages(messages);
+  const { exchanges, unpairedMessages, incompleteMessages } =
+    pairStructuredMessages(messages);
   if (unpairedMessages > 0) {
-    const unpairedWarning = `${unpairedMessages} structured message${unpairedMessages === 1 ? '' : 's'} could not be paired and ${unpairedMessages === 1 ? 'was' : 'were'} omitted.`;
+    const unpairedWarning = `${unpairedMessages} structured message${unpairedMessages === 1 ? "" : "s"} could not be paired and ${unpairedMessages === 1 ? "was" : "were"} omitted.`;
     warnings.push(unpairedWarning);
   }
 
   if (incompleteMessages > 0) {
-    const incompleteWarning = `${incompleteMessages} structured message${incompleteMessages === 1 ? '' : 's'} appeared to be still generating or interrupted. The captured text may be incomplete.`;
+    const incompleteWarning = `${incompleteMessages} structured message${incompleteMessages === 1 ? "" : "s"} appeared to be still generating or interrupted. The captured text may be incomplete.`;
     warnings.push(incompleteWarning);
   }
 
   return {
     draft: {
       title:
-        typeof payload.title === 'string' && payload.title.trim()
+        typeof payload.title === "string" && payload.title.trim()
           ? payload.title.trim()
-          : 'Untitled ChatGPT conversation',
+          : "Untitled ChatGPT conversation",
       sourceUrl,
       exchanges,
     },
@@ -215,14 +268,15 @@ function formatUnsupportedContentWarning(
   retained: number,
   skipped: number,
 ): string {
-  const messageLabel = `${total} non-standard structured message${total === 1 ? '' : 's'}`;
+  const messageLabel = `${total} non-standard structured message${total === 1 ? "" : "s"}`;
   const detail =
     retained > 0 && skipped > 0
-      ? `Readable text was retained from ${retained}; ${skipped} with no readable text ${skipped === 1 ? 'was' : 'were'} skipped.`
+      ? `Readable text was retained from ${retained}; ${skipped} with no readable text ${skipped === 1 ? "was" : "were"} skipped.`
       : retained > 0
         ? `Readable text was retained from ${retained}; only unsupported portions were omitted.`
-        : `${skipped} contained no readable text and ${skipped === 1 ? 'was' : 'were'} skipped.`;
-  return `${messageLabel} could not be fully interpreted. ${detail} The rest of the Conversation was processed normally. Use “Download structured JSON (sensitive)” for node-level details.`;
+        : `${skipped} contained no readable text and ${skipped === 1 ? "was" : "were"} skipped.`;
+  return `${messageLabel} could not be fully interpreted. ${detail}`;
+  // return `${messageLabel} could not be fully interpreted. ${detail} The rest of the Conversation was processed normally. Use “Download structured JSON (sensitive)” for node-level details.`;
 }
 
 export function extractConversationId(url: string): string | undefined {
@@ -234,27 +288,40 @@ export function extractConversationId(url: string): string | undefined {
   }
 }
 
-function traceCurrentBranch(mapping: Record<string, unknown>, currentNodeId: string): TracedNode[] {
+function traceCurrentBranch(
+  mapping: Record<string, unknown>,
+  currentNodeId: string,
+): TracedNode[] {
   const reversePath: TracedNode[] = [];
   const visited = new Set<string>();
   let nodeId: string | undefined = currentNodeId;
 
   while (nodeId) {
     if (visited.has(nodeId)) {
-      throw new Error('ChatGPT structured conversation data contains a parent cycle.');
+      throw new Error(
+        "ChatGPT structured conversation data contains a parent cycle.",
+      );
     }
     visited.add(nodeId);
 
     const node: unknown = mapping[nodeId];
     if (!isRecord(node)) {
-      throw new Error(`ChatGPT structured conversation data is missing node ${nodeId}.`);
+      throw new Error(
+        `ChatGPT structured conversation data is missing node ${nodeId}.`,
+      );
     }
 
     reversePath.push({ id: nodeId, node });
-    if (node.parent !== undefined && node.parent !== null && typeof node.parent !== 'string') {
-      throw new Error(`ChatGPT structured conversation node ${nodeId} has an invalid parent.`);
+    if (
+      node.parent !== undefined &&
+      node.parent !== null &&
+      typeof node.parent !== "string"
+    ) {
+      throw new Error(
+        `ChatGPT structured conversation node ${nodeId} has an invalid parent.`,
+      );
     }
-    nodeId = typeof node.parent === 'string' ? node.parent : undefined;
+    nodeId = typeof node.parent === "string" ? node.parent : undefined;
   }
 
   return reversePath.reverse();
@@ -267,8 +334,8 @@ function normalizeNodeMessage(
   if (!isRecord(node) || !isRecord(node.message)) {
     return {
       unsupportedContent: false,
-      outcome: 'ignored',
-      reasons: ['Node does not contain a message object.'],
+      outcome: "ignored",
+      reasons: ["Node does not contain a message object."],
     };
   }
 
@@ -279,20 +346,20 @@ function normalizeNodeMessage(
   if (metadata.is_visually_hidden_from_conversation === true) {
     return {
       unsupportedContent: false,
-      outcome: 'ignored',
-      reasons: ['Message is marked as visually hidden.'],
+      outcome: "ignored",
+      reasons: ["Message is marked as visually hidden."],
     };
   }
-  if (role !== 'user' && role !== 'assistant') {
-    return role === 'system' || role === undefined
+  if (role !== "user" && role !== "assistant") {
+    return role === "system" || role === undefined
       ? {
           unsupportedContent: false,
-          outcome: 'ignored',
-          reasons: ['Message is not a visible user or assistant message.'],
+          outcome: "ignored",
+          reasons: ["Message is not a visible user or assistant message."],
         }
       : {
           unsupportedContent: true,
-          outcome: 'skipped',
+          outcome: "skipped",
           reasons: [`Unsupported visible message role: ${String(role)}.`],
         };
   }
@@ -300,49 +367,55 @@ function normalizeNodeMessage(
 
   const content = isRecord(message.content) ? message.content : undefined;
   const contentType =
-    content && typeof content.content_type === 'string' ? content.content_type : undefined;
+    content && typeof content.content_type === "string"
+      ? content.content_type
+      : undefined;
   if (contentType && IGNORED_INTERNAL_CONTENT_TYPES.has(contentType)) {
     return {
       unsupportedContent: false,
-      outcome: 'ignored',
+      outcome: "ignored",
       reasons: [`Internal content type ${contentType} is not user-visible.`],
     };
   }
   if (!content || !Array.isArray(content.parts)) {
     return {
       unsupportedContent: true,
-      outcome: 'skipped',
-      reasons: ['Message content does not contain a supported parts array.'],
+      outcome: "skipped",
+      reasons: ["Message content does not contain a supported parts array."],
     };
   }
 
   const reasons: string[] = [];
   let unsupportedContent =
-    contentType !== undefined && contentType !== 'text' && contentType !== 'multimodal_text';
+    contentType !== undefined &&
+    contentType !== "text" &&
+    contentType !== "multimodal_text";
   if (unsupportedContent) {
     reasons.push(`Unsupported content type: ${contentType}.`);
   }
   const textParts = content.parts.flatMap((part): string[] => {
-    if (typeof part === 'string') {
+    if (typeof part === "string") {
       return part.trim() ? [part] : [];
     }
-    if (isRecord(part) && typeof part.text === 'string') {
-      if (part.type !== undefined && part.type !== 'text') {
+    if (isRecord(part) && typeof part.text === "string") {
+      if (part.type !== undefined && part.type !== "text") {
         unsupportedContent = true;
-        reasons.push(`Part with type ${String(part.type)} was only partially parsed.`);
+        reasons.push(
+          `Part with type ${String(part.type)} was only partially parsed.`,
+        );
       }
       return part.text.trim() ? [part.text] : [];
     }
     if (
       isRecord(part) &&
-      part.type === 'text' &&
-      typeof part.content === 'string'
+      part.type === "text" &&
+      typeof part.content === "string"
     ) {
       return part.content.trim() ? [part.content] : [];
     }
     if (part !== null) {
       unsupportedContent = true;
-      reasons.push('A message part used an unsupported shape.');
+      reasons.push("A message part used an unsupported shape.");
     }
     return [];
   });
@@ -351,40 +424,50 @@ function normalizeNodeMessage(
     if (incomplete && !unsupportedContent) {
       return {
         unsupportedContent: false,
-        outcome: 'parsed',
-        reasons: ['Message is explicitly incomplete and does not contain text yet.'],
+        outcome: "parsed",
+        reasons: [
+          "Message is explicitly incomplete and does not contain text yet.",
+        ],
         message: {
           role,
-          markdown: '',
+          markdown: "",
           createdAt: toEpochSeconds(message.create_time),
           model:
-            role === 'assistant'
-              ? firstNonEmptyString(metadata.model_slug, metadata.model, defaultModel)
+            role === "assistant"
+              ? firstNonEmptyString(
+                  metadata.model_slug,
+                  metadata.model,
+                  defaultModel,
+                )
               : undefined,
           incomplete: true,
         },
       };
     }
     return unsupportedContent
-      ? { unsupportedContent: true, outcome: 'skipped', reasons }
+      ? { unsupportedContent: true, outcome: "skipped", reasons }
       : {
           unsupportedContent: false,
-          outcome: 'ignored',
-          reasons: ['Message contains no non-empty text.'],
+          outcome: "ignored",
+          reasons: ["Message contains no non-empty text."],
         };
   }
 
   return {
     unsupportedContent,
-    outcome: unsupportedContent ? 'partial' : 'parsed',
+    outcome: unsupportedContent ? "partial" : "parsed",
     reasons,
     message: {
       role,
-      markdown: textParts.join('\n\n').trim(),
+      markdown: textParts.join("\n\n").trim(),
       createdAt: toEpochSeconds(message.create_time),
       model:
-        role === 'assistant'
-          ? firstNonEmptyString(metadata.model_slug, metadata.model, defaultModel)
+        role === "assistant"
+          ? firstNonEmptyString(
+              metadata.model_slug,
+              metadata.model,
+              defaultModel,
+            )
           : undefined,
       incomplete,
     },
@@ -406,15 +489,19 @@ function toMessageDiagnostic(
 
 function readMessageIdentity(
   node: Record<string, unknown>,
-): Pick<StructuredMessageDiagnostic, 'role' | 'contentType'> {
+): Pick<StructuredMessageDiagnostic, "role" | "contentType"> {
   const message = isRecord(node.message) ? node.message : undefined;
-  const author = message && isRecord(message.author) ? message.author : undefined;
-  const content = message && isRecord(message.content) ? message.content : undefined;
+  const author =
+    message && isRecord(message.author) ? message.author : undefined;
+  const content =
+    message && isRecord(message.content) ? message.content : undefined;
   const role = author?.role ?? message?.role;
   return {
-    role: typeof role === 'string' ? role : undefined,
+    role: typeof role === "string" ? role : undefined,
     contentType:
-      typeof content?.content_type === 'string' ? content.content_type : undefined,
+      typeof content?.content_type === "string"
+        ? content.content_type
+        : undefined,
   };
 }
 
@@ -429,7 +516,7 @@ function createDebugLog(
     capturedAt: new Date().toISOString(),
     sourceUrl,
     currentNode:
-      isRecord(payload) && typeof payload.current_node === 'string'
+      isRecord(payload) && typeof payload.current_node === "string"
         ? payload.current_node
         : undefined,
     parseError,
@@ -460,13 +547,19 @@ function pairStructuredMessages(messages: StructuredMessage[]): {
         ? formatEpochSeconds(finalResponse.createdAt)
         : undefined;
       const responseDelaySeconds =
-        pendingQuery.createdAt !== undefined && finalResponse.createdAt !== undefined
-          ? Math.max(0, Math.round(finalResponse.createdAt - pendingQuery.createdAt))
+        pendingQuery.createdAt !== undefined &&
+        finalResponse.createdAt !== undefined
+          ? Math.max(
+              0,
+              Math.round(finalResponse.createdAt - pendingQuery.createdAt),
+            )
           : undefined;
 
       exchanges.push({
         queryMarkdown: pendingQuery.markdown,
-        responseMarkdown: responseMessages.map((message) => message.markdown).join('\n\n'),
+        responseMarkdown: responseMessages
+          .map((message) => message.markdown)
+          .join("\n\n"),
         responseTimestamp,
         responseDelaySeconds,
         model: finalResponse.model,
@@ -481,7 +574,7 @@ function pairStructuredMessages(messages: StructuredMessage[]): {
     if (message.incomplete) {
       incompleteMessages += 1;
     }
-    if (message.role === 'user') {
+    if (message.role === "user") {
       flush();
       pendingQuery = message;
     } else if (pendingQuery) {
@@ -500,15 +593,15 @@ function isMessageIncomplete(
   metadata: Record<string, unknown>,
 ): boolean {
   return (
-    message.status === 'in_progress' ||
-    message.status === 'streaming' ||
+    message.status === "in_progress" ||
+    message.status === "streaming" ||
     metadata.is_complete === false
   );
 }
 
 function formatRetryAdvice(retryAfter: string | null): string {
   if (!retryAfter) {
-    return ' Try again later.';
+    return " Try again later.";
   }
 
   const seconds = Number(retryAfter);
@@ -518,19 +611,19 @@ function formatRetryAdvice(retryAfter: string | null): string {
 
   const retryAt = Date.parse(retryAfter);
   return Number.isNaN(retryAt)
-    ? ' Try again later.'
+    ? " Try again later."
     : ` Try again after ${new Date(retryAt).toISOString()}.`;
 }
 
 function formatEpochSeconds(value: number): string {
-  return new Date(value * 1000).toISOString().slice(0, 19).replace('T', ' ');
+  return new Date(value * 1000).toISOString().slice(0, 19).replace("T", " ");
 }
 
 function toEpochSeconds(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) {
+  if (typeof value === "number" && Number.isFinite(value)) {
     return value;
   }
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     const milliseconds = Date.parse(value);
     return Number.isNaN(milliseconds) ? undefined : milliseconds / 1000;
   }
@@ -539,10 +632,11 @@ function toEpochSeconds(value: unknown): number | undefined {
 
 function firstNonEmptyString(...values: unknown[]): string | undefined {
   return values.find(
-    (value): value is string => typeof value === 'string' && value.trim().length > 0,
+    (value): value is string =>
+      typeof value === "string" && value.trim().length > 0,
   );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

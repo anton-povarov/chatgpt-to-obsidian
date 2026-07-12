@@ -29,7 +29,7 @@ npm run build
 5. Select `output/chrome-mv3` from this project.
 6. Reload any already-open ChatGPT tab so the new content script is active.
 
-Clicking the extension toolbar button opens a near-full-height editor inside the ChatGPT page. It extracts the Visible Branch and shows an editable, high-fidelity Markdown preview. Saving to Obsidian is not implemented yet; see `TASKS.md` for the remaining work.
+Clicking the extension toolbar button opens a near-full-height editor inside the ChatGPT page. It extracts the Visible Branch and shows an editable, high-fidelity Markdown body preview. Click **Save to Obsidian** to generate frontmatter from the current title and tags, prepend it to the displayed body, and send the complete document to Obsidian. A blank Vault uses Obsidian's last active vault, and a blank Folder defaults to `ChatGPT`. The extension uses the clipboard-backed Obsidian URI flow, so the Obsidian desktop app must be installed and registered to handle `obsidian://` links.
 
 ## Design
 

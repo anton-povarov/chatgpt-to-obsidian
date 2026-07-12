@@ -1,7 +1,9 @@
 import type { ConversationDraft } from "../domain/conversation-draft";
 import type { Exchange } from "../domain/conversation-snapshot";
 
-export interface RenderConversationOptions {
+export interface ConversationDocumentMetadata {
+  title: string;
+  sourceUrl: string;
   exportedAt: string;
   tags: string[];
 }
@@ -10,32 +12,30 @@ export function formatObsidianDateTime(date: Date): string {
   return date.toISOString().slice(0, 19).replace("T", " ");
 }
 
-export function renderConversationMarkdown(
-  draft: ConversationDraft,
-  options: RenderConversationOptions,
-): string {
-  const frontmatter = renderFrontmatter(draft, options);
-  const exchanges = draft.exchanges.map(renderExchange).join("\n\n");
-
-  return `${frontmatter}\n\n${exchanges}`.trimEnd();
+export function renderConversationBody(draft: ConversationDraft): string {
+  return draft.exchanges.map(renderExchange).join("\n\n").trimEnd();
 }
 
-function renderFrontmatter(
-  draft: ConversationDraft,
-  options: RenderConversationOptions,
+export function renderConversationDocument(
+  bodyMarkdown: string,
+  metadata: ConversationDocumentMetadata,
 ): string {
+  return `${renderFrontmatter(metadata)}\n\n${bodyMarkdown}`.trimEnd();
+}
+
+function renderFrontmatter(metadata: ConversationDocumentMetadata): string {
   const tags =
-    options.tags.length === 0
+    metadata.tags.length === 0
       ? "tags: []"
-      : ["tags:", ...options.tags.map((tag) => `  - ${yamlString(tag)}`)].join(
+      : ["tags:", ...metadata.tags.map((tag) => `  - ${yamlString(tag)}`)].join(
           "\n",
         );
 
   return [
     "---",
-    `title: ${yamlString(draft.title)}`,
-    `source: ${yamlString(draft.sourceUrl)}`,
-    `exported: ${options.exportedAt}`,
+    `title: ${yamlString(metadata.title)}`,
+    `source: ${yamlString(metadata.sourceUrl)}`,
+    `exported: ${metadata.exportedAt}`,
     tags,
     "---",
   ].join("\n");

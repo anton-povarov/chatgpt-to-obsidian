@@ -37,20 +37,22 @@ The structured same-session Conversation graph is the primary collection method.
 
   Required work:
 
-  - Add controlled vault, folder, default tags, note title, and Markdown fields.
-  - Persist one Export Profile containing vault, folder, and default tags in extension-local storage.
-  - Use profile tags when rendering the initial Markdown snapshot.
-  - Keep the current note title and edited Markdown in controlled per-export state ready for the save action; do not rely on stale initial values or ignored DOM defaults.
+  - Add controlled vault, folder, current tags, note title, and Markdown body fields.
+  - Persist one Export Profile containing vault and folder in extension-local storage.
+  - Initialize every current document with the hardcoded `chatgpt` tag; tag edits apply only to that Conversation Snapshot.
+  - Keep the current note title, tags, and edited Markdown body in controlled per-export state ready for the save action; do not rely on stale initial values or ignored DOM defaults.
   - Add loading, collection progress, profile persistence status, and actionable collection or storage error states. Obsidian saving, success, and save-error states belong to the next task.
   - Keep the embedded editor responsive and usable with large Markdown snapshots.
+  - Keep collection method above a compact single-line vault/folder/title/tags form and keep the structured-JSON control plus full-width Save action visible without scrolling the embedded frame.
 
   Acceptance criteria:
 
-  - Vault, folder, and default tags survive browser restart and extension reload.
+  - Vault and folder survive browser restart and extension reload; tags reset to `chatgpt` for each newly collected document.
   - Per-export edits do not silently mutate the saved Export Profile unless the user explicitly changes a profile field.
-  - Editing the note title does not unexpectedly rewrite Markdown frontmatter.
+  - The preview contains only the editable Markdown body; frontmatter is generated from current fields when saving.
   - Profile storage failures are visible without preventing best-effort Conversation collection.
   - Profile normalization and storage behavior are covered without adding a browser-UI testing dependency.
+  - The Markdown textarea owns content scrolling; the embedded frame does not scroll and the Save action remains immediately visible.
 
 ## P0 — Save to Obsidian
 
@@ -68,11 +70,11 @@ The structured same-session Conversation graph is the primary collection method.
 
   Acceptance criteria:
 
-  - Save creates a new note in the configured vault and folder using the editable note title.
-  - The Save action uses the currently displayed vault, folder, note title, and Markdown rather than initial or stale values.
-  - The saved note contains the edited Markdown exactly as shown at the time of saving.
+  - Save creates a new note using the editable note title; blank Vault uses Obsidian's last active vault and blank Folder uses `ChatGPT`.
+  - The Save action uses the currently displayed vault, folder, note title, tags, and Markdown body rather than initial or stale values.
+  - The saved note contains frontmatter generated from the current title and tags plus the edited Markdown body exactly as shown at the time of saving.
   - No overwrite, append, or merge flag is sent; Obsidian handles duplicate-name suffixing.
-  - Silent mode is requested.
+  - Obsidian opens and focuses the newly created note; silent mode is not requested.
   - Long Conversations always use the clipboard path and are never placed in a URI query parameter.
   - Clipboard failure has a bounded URI-content fallback and never launches a truncated export.
   - Required fields are validated before saving, errors identify the field or action requiring attention, and collection warnings remain distinct from save failures.

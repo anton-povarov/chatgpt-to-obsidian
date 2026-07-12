@@ -188,7 +188,7 @@ describe('parseChatGptConversationGraph', () => {
       },
     ]);
     expect(result.warnings).toEqual([
-      '1 non-standard structured message could not be fully interpreted. Readable text was retained from 1; only unsupported portions were omitted. The rest of the Conversation was processed normally. Use “Download structured JSON (sensitive)” for node-level details.',
+      '1 non-standard structured message could not be fully interpreted. Readable text was retained from 1; only unsupported portions were omitted.',
     ]);
     expect(result.messageDiagnostics).toEqual(
       expect.arrayContaining([
@@ -225,7 +225,7 @@ describe('parseChatGptConversationGraph', () => {
       }),
     ]);
     expect(result.warnings).toEqual([
-      '1 non-standard structured message could not be fully interpreted. 1 contained no readable text and was skipped. The rest of the Conversation was processed normally. Use “Download structured JSON (sensitive)” for node-level details.',
+      '1 non-standard structured message could not be fully interpreted. 1 contained no readable text and was skipped.',
       '1 structured message could not be paired and was omitted.',
     ]);
   });
@@ -280,7 +280,7 @@ describe('parseChatGptConversationGraph', () => {
       }),
     ]);
     expect(result.warnings[0]).toBe(
-      '1 non-standard structured message could not be fully interpreted. 1 contained no readable text and was skipped. The rest of the Conversation was processed normally. Use “Download structured JSON (sensitive)” for node-level details.',
+      '1 non-standard structured message could not be fully interpreted. 1 contained no readable text and was skipped.',
     );
     expect(result.warnings[1]).toBe('1 structured message could not be paired and was omitted.');
   });

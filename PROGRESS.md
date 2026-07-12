@@ -1,6 +1,6 @@
 # Project Progress
 
-Last updated: 2026-07-12 (Asia/Dubai)
+Last updated: 2026-07-13 (Asia/Dubai)
 
 ## Objective
 
@@ -8,13 +8,13 @@ Build a personal, unpacked Chromium extension that exports the Current Conversat
 
 ## Current state
 
-The extension builds, loads in Opera, opens its editor as a near-full-height iframe overlay in the active ChatGPT tab, collects the Visible Branch from ChatGPT's structured same-session Conversation graph, falls back to automatic DOM scrolling when necessary, converts the result to Markdown, and presents an editable Markdown preview. It does not yet save to Obsidian.
+The extension builds, loads in Opera, opens its editor as a near-full-height iframe overlay in the active ChatGPT tab, collects the Visible Branch from ChatGPT's structured same-session Conversation graph, falls back to automatic DOM scrolling when necessary, converts the result to Markdown, presents an editable Markdown body preview, and implements the clipboard-backed Obsidian URI save flow. The latest metadata/body UI revision still needs manual validation in Opera and Obsidian.
 
 Verified manually in Opera:
 
 - `output/chrome-mv3` loads as an unpacked extension.
 - The toolbar action opens and closes a near-full-height embedded editor on a private ChatGPT Conversation.
-- The embedded editor follows the ChatGPT viewport height, scrolls internally, and is no longer constrained by Chromium's action-popup height limit.
+- The embedded editor follows the ChatGPT viewport height and is no longer constrained by Chromium's action-popup height limit. This previously scrollable frame behavior has since been replaced by a fixed layout pending manual validation.
 - Editor-to-content-script messaging works through Chromium's `sendResponse` callback.
 - Conversation content is extracted without the sidebar or surrounding ChatGPT controls.
 - Queries render as Obsidian Query callouts.
@@ -29,7 +29,7 @@ Verified automatically:
 
 - `npm run typecheck` passes.
 - `npm run lint` passes.
-- `npm test` passes: 43 tests across 9 files.
+- `npm test` passes: 60 tests across 12 files.
 - `npm run build` passes and produces `output/chrome-mv3`.
 
 ## Implemented behavior
@@ -46,12 +46,26 @@ Verified automatically:
 
 - The toolbar action toggles a fixed editor iframe inside the ChatGPT page at `calc(100vh - 24px)`, avoiding Chromium's 600-pixel action-popup cap.
 - The embedded editor is isolated from page styles, exposes its extension resources only on `chatgpt.com`, and closes from its header button or the Escape key.
-- Vault, folder, and comma-separated default tags are controlled editor fields.
+- Vault, folder, comma-separated current tags, note title, and Markdown body are controlled editor fields.
+- Collection method appears above a compact four-row metadata form whose left labels and right inputs keep vault, folder, title, and tags aligned on single lines.
+- Empty Vault and Folder fields show gray inlay hints: Vault delegates to Obsidian's last active vault, while Folder resolves to `ChatGPT` when saving.
+- The embedded frame itself does not scroll: the Markdown textarea consumes remaining height and scrolls internally, while the structured-JSON control and full-width Save action remain pinned at the bottom.
 - One Export Profile is normalized and persisted in extension-local storage; rapid edits are serialized so the newest value is stored last.
-- Persisted tags load before collection and determine the initial Markdown frontmatter. Later default-tag edits apply to future snapshots and never overwrite current Markdown edits.
-- Note title and Markdown are controlled per-export values and do not mutate profile defaults.
+- The Export Profile contains only vault and folder. Legacy stored default tags are ignored; every newly collected document starts with the hardcoded `chatgpt` tag.
+- Note title, tags, and Markdown body are controlled per-export values and do not mutate profile defaults.
+- The preview contains only the editable Markdown body. Source and collection timestamp remain immutable per-document state; current title and tags generate YAML-safe frontmatter only when Save is clicked.
 - Profile loading or saving failures are shown separately from Conversation collection warnings.
 - The structured diagnostic JSON download remains available from the ready editor.
+
+### Save to Obsidian
+
+- The editor exposes a full-width **Save to Obsidian** action below the structured diagnostic JSON button and its sensitivity hint.
+- Save validates the current folder, note title, and Markdown values and reports save failures separately from collection warnings and Export Profile storage errors. Vault is optional so Obsidian can use its last active vault.
+- The vault-relative file path is built from the configured folder, or `ChatGPT` when blank, and a normalized, filesystem-safe note title capped by UTF-8 byte length.
+- Save prepends generated frontmatter to the exact currently displayed Markdown body before copying the complete document to the clipboard. The background worker then dispatches `obsidian://new` with `file` and `clipboard`, plus `vault` only when configured; silent mode is omitted so Obsidian opens and focuses the newly created note in a tab.
+- No append, overwrite, or merge option is sent, so duplicate handling remains Obsidian's responsibility.
+- If clipboard writing fails, complete Markdown can be placed in a bounded URI-content fallback. Oversized Markdown is never truncated or launched through that fallback.
+- Successful browser dispatch is reported as sent to Obsidian rather than as confirmed note creation, because Chromium cannot observe whether the external application completed the write.
 
 ### Conversation collection
 
@@ -149,13 +163,13 @@ Embedded editor
   → editable Markdown textarea
 ```
 
-Planned save boundary:
+Save boundary:
 
 ```text
 Edited Markdown
   → clipboard
   → background service worker
-  → obsidian://new?file=...&vault=...&silent=true&clipboard
+  → obsidian://new?file=...&vault=...&clipboard
   → Obsidian vault note
 ```
 
@@ -199,8 +213,8 @@ Structured same-session Conversation data is the preferred source for the Visibl
 - Structured requests may eventually encounter rate limiting. The extension performs at most one session request and one Conversation request per in-flight collection, shares that collection across concurrent editor requests, does not retry automatically, reports sanitized `Retry-After` guidance, and falls back to DOM on request failure.
 - Interrupted-generation detection is conservative and recognizes only explicit `in_progress`, `streaming`, or `is_complete: false` signals plus unpaired messages; other private-schema signals may be missed.
 - Response timestamps, query-to-response delay, and model enrichment are available from structured messages when those fields are present; broader fixture and live coverage remains open.
-- Vault, folder, and default tags are persisted; note-title and Markdown edits remain per-export and are not yet saved to Obsidian.
-- No Save button or Obsidian URI bridge.
+- Vault and folder are persisted; current note-title, tags, and Markdown body edits remain per-export values and are used by the Save action without mutating profile defaults.
+- The Obsidian save flow is implemented but not yet manually validated in Opera and Obsidian on macOS.
 - No local image downloading. Remote image links may require ChatGPT authentication and may expire.
 - User-entered assembly and source examples that ChatGPT does not mark as code remain plain quoted text. Conservative code inference is deferred.
 - DOM selectors are intentionally narrow but depend on ChatGPT's current markup. Live fixtures should be added whenever a selector changes.
@@ -218,4 +232,4 @@ Structured same-session Conversation data is the preferred source for the Visibl
 3. Run `npm run typecheck && npm run lint && npm test && npm run build`.
 4. In Opera, load or reload `output/chrome-mv3` from `opera://extensions`.
 5. Reload the ChatGPT tab after every content-script rebuild. Reloading only the extension is insufficient for an already-open page.
-6. Start with **P0 — Save to Obsidian** in `TASKS.md`. Reassess its acceptance criteria before implementation; avoid adding complexity for failures Chromium cannot reliably observe.
+6. Manually validate **P0 — Save to Obsidian** in Opera and Obsidian with short and long private Conversations, including current title/tag frontmatter generation and the body-only preview, before marking the task complete.

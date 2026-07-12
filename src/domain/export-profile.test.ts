@@ -2,17 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_EXPORT_PROFILE,
-  formatTagsInput,
   normalizeExportProfile,
-  parseTagsInput,
 } from './export-profile';
 
 describe('DEFAULT_EXPORT_PROFILE', () => {
-  it('starts with a ChatGPT tag', () => {
-    expect(DEFAULT_EXPORT_PROFILE.defaultTags).toEqual(['chatgpt']);
+  it('contains only persistent vault destination fields', () => {
+    expect(DEFAULT_EXPORT_PROFILE).toEqual({ vault: '', folder: '' });
   });
 
-  it('normalizes persisted profile values and removes duplicate tags', () => {
+  it('normalizes persisted profile values and ignores legacy default tags', () => {
     expect(
       normalizeExportProfile({
         vault: '  Personal notes ',
@@ -23,7 +21,6 @@ describe('DEFAULT_EXPORT_PROFILE', () => {
     ).toEqual({
       vault: 'Personal notes',
       folder: 'Imports/ChatGPT',
-      defaultTags: ['chatgpt', 'reference'],
     });
   });
 
@@ -31,15 +28,6 @@ describe('DEFAULT_EXPORT_PROFILE', () => {
     expect(normalizeExportProfile({ vault: 42, defaultTags: 'chatgpt' })).toEqual({
       vault: '',
       folder: '',
-      defaultTags: ['chatgpt'],
     });
-  });
-
-  it('parses and formats a comma-separated tags field', () => {
-    expect(parseTagsInput(' chatgpt, reference, chatgpt,  ')).toEqual([
-      'chatgpt',
-      'reference',
-    ]);
-    expect(formatTagsInput(['chatgpt', 'reference'])).toBe('chatgpt, reference');
   });
 });

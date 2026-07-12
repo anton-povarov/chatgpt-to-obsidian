@@ -20,22 +20,27 @@ body {
 .is-embedded body {
   width: 100%;
   height: 100%;
-  min-height: 100%;
-  overflow: auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .popup {
-  display: grid;
-  gap: 18px;
-  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
 }
 
 .is-embedded .popup {
-  min-height: 100%;
+  height: 100vh;
+  max-height: 100vh;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .popup-header {
   display: flex;
+  flex: 0 0 auto;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
@@ -70,6 +75,9 @@ dd {
 }
 
 .diagnostics {
+  flex: 0 1 auto;
+  max-height: 150px;
+  overflow: auto;
   border: 1px solid #ded8eb;
   border-radius: 10px;
   background: #fff;
@@ -120,7 +128,8 @@ h2 {
 }
 
 .collection-method {
-  margin: -8px 0 0;
+  flex: 0 0 auto;
+  margin: 0;
   color: #615b6f;
   font-size: 12px;
 }
@@ -148,24 +157,52 @@ label small {
   line-height: 1.4;
 }
 
-.profile-fields {
+.metadata-form {
   display: grid;
-  gap: 14px;
+  flex: 0 0 auto;
   border: 1px solid #ded8eb;
-  border-radius: 12px;
+  border-radius: 10px;
   background: #fff;
-  padding: 14px;
+  overflow: hidden;
 }
 
-.profile-fields h2,
-.profile-fields p {
-  margin-bottom: 0;
+.metadata-row {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 8px 0 12px;
 }
 
-.profile-fields > div > p {
-  margin-top: 4px;
+.metadata-row + .metadata-row {
+  border-top: 1px solid #eeeaf4;
+}
+
+.metadata-row > span {
+  overflow: hidden;
   color: #777184;
   font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metadata-row input {
+  height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  padding: 6px 8px;
+}
+
+.metadata-row input:focus {
+  background: #f7f5fb;
+  outline: 1px solid #cec6dc;
+}
+
+.profile-status:empty {
+  display: none;
 }
 
 .profile-save-status {
@@ -206,9 +243,45 @@ button:disabled {
   opacity: 0.65;
 }
 
+.save-export {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 9px;
+  border-top: 1px solid #ded8eb;
+  padding-top: 14px;
+}
+
+.save-to-obsidian {
+  width: 100%;
+  border-color: #6d28d9;
+  background: #6d28d9;
+  color: #fff;
+  padding: 11px 16px;
+}
+
+.save-export p {
+  margin: 0;
+  max-height: 74px;
+  overflow: auto;
+}
+
+.save-success {
+  border: 1px solid #bbdfc4;
+  border-radius: 10px;
+  background: #f4fbf5;
+  padding: 10px 12px;
+  color: #166534;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
 .debug-export {
   display: grid;
-  gap: 7px;
+  grid-template-columns: max-content minmax(0, 1fr);
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px 10px;
 }
 
 .debug-export p {
@@ -219,16 +292,35 @@ button:disabled {
 }
 
 .debug-export .download-success {
+  grid-column: 1 / -1;
   color: #166534;
 }
 
 .debug-export .download-error {
+  grid-column: 1 / -1;
   color: #991b1b;
 }
 
-textarea {
-  min-height: 340px;
-  max-height: 58vh;
+.editor-notices {
+  display: grid;
+  flex: 0 1 auto;
+  gap: 8px;
+  /* max-height: 96px; */
+  overflow: auto;
+}
+
+.editor-notices .notice {
+  margin: 0;
+  background-color: #FCC781; /* a pale yellow-ish orange */
+}
+
+textarea.markdown-editor {
+  flex: 1 1 240px;
+  height: auto;
+  min-height: 180px;
+  max-height: none;
+  margin: 0;
+  overflow: auto;
   resize: vertical;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 12px;

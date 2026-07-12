@@ -20,7 +20,6 @@ describe('Export Profile storage', () => {
     await expect(loadExportProfile(storage)).resolves.toEqual({
       vault: 'Personal',
       folder: 'ChatGPT',
-      defaultTags: ['chatgpt', 'reference'],
     });
   });
 
@@ -31,7 +30,6 @@ describe('Export Profile storage', () => {
       {
         vault: ' Personal ',
         folder: ' Imports ',
-        defaultTags: ['chatgpt', ' chatgpt ', ''],
       },
       storage,
     );
@@ -40,7 +38,6 @@ describe('Export Profile storage', () => {
       [EXPORT_PROFILE_STORAGE_KEY]: {
         vault: 'Personal',
         folder: 'Imports',
-        defaultTags: ['chatgpt'],
       },
     });
   });
