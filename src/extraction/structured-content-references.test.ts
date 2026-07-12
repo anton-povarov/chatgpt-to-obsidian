@@ -32,6 +32,42 @@ describe("replaceStructuredContentReferences", () => {
     );
   });
 
+  it("renders grouped webpage citations with deduplicated clean links", () => {
+    const citation = "citeturn0search3turn0search2";
+
+    expect(
+      replaceStructuredContentReferences(`Supported claim. ${citation}`, [
+        {
+          matched_text: citation,
+          type: "grouped_webpages",
+          name: null,
+          alt: "([GitHub](https://github.com/apple/containerization?utm_source=chatgpt.com))",
+          safe_urls: [
+            "https://github.com/apple/containerization",
+            "https://github.com/apple/containerization?utm_source=chatgpt.com",
+            "https://opensource.apple.com/projects/container",
+            "https://opensource.apple.com/projects/container?utm_source=chatgpt.com",
+          ],
+        },
+      ]),
+    ).toBe(
+      "Supported claim. ([github.com](https://github.com/apple/containerization), [opensource.apple.com](https://opensource.apple.com/projects/container))",
+    );
+  });
+
+  it("uses alt text when available and readable raw content otherwise", () => {
+    const described = "new_typeopaque-id";
+    const unknown = "citeturn0search3turn0search2";
+
+    expect(
+      replaceStructuredContentReferences(`${described} then ${unknown}`, [
+        { matched_text: described, type: "new_type", alt: "Readable description" },
+      ]),
+    ).toBe(
+      "Readable description then cite|turn0search3|turn0search2",
+    );
+  });
+
   it("ignores malformed references and absent markers", () => {
     const text = "Keep this text unchanged.";
 
@@ -41,6 +77,7 @@ describe("replaceStructuredContentReferences", () => {
         { matched_text: "", name: "Empty marker" },
         { matched_text: "unchanged", name: "" },
         { matched_text: "not present", name: "Replacement" },
+        { matched_text: " ", type: "sources_footnote", name: null },
       ]),
     ).toBe(text);
     expect(replaceStructuredContentReferences(text, undefined)).toBe(text);

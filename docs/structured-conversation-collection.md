@@ -81,7 +81,7 @@ The structured parser currently accepts textual parts represented as:
 
 Empty text parts are ignored individually. Multiple non-empty parts retain their order and are separated by a blank line. A node containing only empty text is treated as empty rather than as an unsupported content type.
 
-ChatGPT content-reference markers in structured text are replaced with the corresponding `name` from `metadata.content_references`. Matching uses each reference's exact `matched_text`, so joining multiple text parts or encountering Unicode before a marker does not invalidate the replacement.
+ChatGPT content-reference markers in structured text are matched using each reference's exact `matched_text`, so joining multiple text parts or encountering Unicode before a marker does not invalidate replacement. Named references become their `name`. Grouped webpage citations become parenthesized Markdown links built from their deduplicated `safe_urls`; ChatGPT's `utm_source` tracking parameter is removed. Other reference types use non-empty `alt` text when available. Any marker left without usable metadata is converted from private-use glyphs to readable `type|payload` text rather than leaking opaque symbols into the exported note.
 
 For unrecognized message content, the collector keeps text represented by one of the supported shapes, omits the unknown fragments, and continues walking the Visible Branch. The editor shows one combined warning explaining how many messages retained readable text and how many were skipped, confirms that the rest of the Conversation was processed, and points to the diagnostic JSON for node-level details. Collection warnings are not inserted into generated Markdown. Unsupported message content alone does not trigger the DOM fallback.
 
@@ -118,7 +118,7 @@ Concurrent editor requests share one in-flight collection rather than issuing du
 
 - Validate more live regenerated responses and edited prompts against `current_node` selection.
 - Expand interrupted-generation detection when real payloads expose completion signals beyond `status: in_progress`, `status: streaming`, or `metadata.is_complete: false`.
-- Add native support for tool calls, deep research, citations, attachments, and generated images incrementally from anonymized real payloads. Until then, retain recognized text and warn about omitted content.
+- Add native support for tool calls, deep research, attachments, and generated images incrementally from anonymized real payloads. Until then, retain recognized text and warn about omitted content.
 - Revisit grouping rules when real payloads show visible message groupings not covered by consecutive assistant nodes.
 
 ## Relevant files

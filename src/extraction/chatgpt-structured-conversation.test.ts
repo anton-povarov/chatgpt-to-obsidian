@@ -212,6 +212,36 @@ describe('parseChatGptConversationGraph', () => {
     );
   });
 
+  it('renders structured web citations as Markdown links', () => {
+    const citation = 'citeturn0search3turn0search2';
+    const payload = structuredSingleExchange({
+      content_type: 'text',
+      parts: [`Supported claim. ${citation}`],
+    });
+    Object.assign(payload.mapping.assistant.message, {
+      metadata: {
+        content_references: [
+          {
+            matched_text: citation,
+            type: 'grouped_webpages',
+            safe_urls: [
+              'https://github.com/apple/containerization',
+              'https://github.com/apple/containerization?utm_source=chatgpt.com',
+              'https://opensource.apple.com/projects/container',
+              'https://opensource.apple.com/projects/container?utm_source=chatgpt.com',
+            ],
+          },
+        ],
+      },
+    });
+
+    const result = parseChatGptConversationGraph(payload, 'https://chatgpt.com/c/id');
+
+    expect(result.draft.exchanges[0]?.responseMarkdown).toBe(
+      'Supported claim. ([github.com](https://github.com/apple/containerization), [opensource.apple.com](https://opensource.apple.com/projects/container))',
+    );
+  });
+
   it('silently ignores a node containing only empty text components', () => {
     const payload = structuredSingleExchange({
       content_type: 'multimodal_text',
