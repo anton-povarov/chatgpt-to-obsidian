@@ -4,6 +4,7 @@ import type { StructuredConversationDebugLog } from '../extraction/chatgpt-struc
 export const COLLECT_CONVERSATION = 'collect-conversation' as const;
 export const COLLECTION_PROGRESS = 'collection-progress' as const;
 export const GET_STRUCTURED_DEBUG_LOG = 'get-structured-debug-log' as const;
+export const TOGGLE_EMBEDDED_POPUP = 'toggle-embedded-popup' as const;
 
 export interface CollectConversationMessage {
   type: typeof COLLECT_CONVERSATION;
@@ -35,6 +36,10 @@ export interface GetStructuredDebugLogResponse {
   ok: boolean;
   log?: StructuredConversationDebugLog;
   error?: string;
+}
+
+export interface ToggleEmbeddedPopupMessage {
+  type: typeof TOGGLE_EMBEDDED_POPUP;
 }
 
 export function isCollectConversationMessage(value: unknown): value is CollectConversationMessage {
@@ -79,5 +84,16 @@ export function isGetStructuredDebugLogMessage(
     value !== null &&
     'type' in value &&
     value.type === GET_STRUCTURED_DEBUG_LOG
+  );
+}
+
+export function isToggleEmbeddedPopupMessage(
+  value: unknown,
+): value is ToggleEmbeddedPopupMessage {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'type' in value &&
+    value.type === TOGGLE_EMBEDDED_POPUP
   );
 }

@@ -1,10 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import { DEFAULT_EXPORT_PROFILE } from '../../src/domain/export-profile';
+import {
+  DEFAULT_EXPORT_PROFILE,
+  formatTagsInput,
+  parseTagsInput,
+  type ExportProfile,
+} from '../../src/domain/export-profile';
 import type { CollectionDiagnostics } from '../../src/domain/conversation-draft';
 import {
   COLLECT_CONVERSATION,
   GET_STRUCTURED_DEBUG_LOG,
+  TOGGLE_EMBEDDED_POPUP,
   isCollectionProgressMessage,
   type CollectConversationResponse,
   type GetStructuredDebugLogResponse,
@@ -13,6 +19,10 @@ import {
   formatObsidianDateTime,
   renderConversationMarkdown,
 } from '../../src/rendering/conversation-markdown';
+import {
+  loadExportProfile,
+  saveExportProfile,
+} from '../../src/storage/export-profile-storage';
 
 type PopupState =
   | {
@@ -35,33 +45,123 @@ type PopupState =
     };
 
 export function App() {
+  const isEmbedded = new URLSearchParams(window.location.search).get('context') === 'embedded';
   const [state, setState] = useState<PopupState>({ status: 'loading' });
+  const [profile, setProfile] = useState<ExportProfile>(() => copyDefaultProfile());
+  const [tagsInput, setTagsInput] = useState(() =>
+    formatTagsInput(DEFAULT_EXPORT_PROFILE.defaultTags),
+  );
+  const [profileSave, setProfileSave] = useState<
+    { status: 'idle' | 'saving' | 'saved' } | { status: 'error'; message: string }
+  >({ status: 'idle' });
+  const profileSaveVersion = useRef(0);
+  const profileSaveQueue = useRef<Promise<void>>(Promise.resolve());
   const [debugDownload, setDebugDownload] = useState<
     { status: 'idle' | 'downloading' | 'success' } | { status: 'error'; message: string }
   >({ status: 'idle' });
 
   useEffect(() => {
     let active = true;
-    void collectCurrentConversation((progress) => {
-      if (active) {
-        setState({ status: 'loading', ...progress });
+    void initializePopup();
+
+    async function initializePopup(): Promise<void> {
+      let loadedProfile = copyDefaultProfile();
+      try {
+        loadedProfile = await loadExportProfile();
+        if (active) {
+          setProfile(loadedProfile);
+          setTagsInput(formatTagsInput(loadedProfile.defaultTags));
+        }
+      } catch (error) {
+        if (active) {
+          setProfileSave({
+            status: 'error',
+            message:
+              error instanceof Error
+                ? `Could not load export defaults: ${error.message}`
+                : 'Could not load export defaults.',
+          });
+        }
       }
-    }).then((nextState) => {
+
+      const nextState = await collectCurrentConversation(
+        loadedProfile.defaultTags,
+        (progress) => {
+          if (active) {
+            setState({ status: 'loading', ...progress });
+          }
+        },
+      );
       if (active) {
         setState(nextState);
       }
-    });
+    }
 
     return () => {
       active = false;
     };
   }, []);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle('is-embedded', isEmbedded);
+    if (!isEmbedded) {
+      return;
+    }
+    const closeOnEscape = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        void closeEmbeddedPopup();
+      }
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.documentElement.classList.remove('is-embedded');
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [isEmbedded]);
+
+  function persistProfile(nextProfile: ExportProfile): void {
+    setProfile(nextProfile);
+    const version = ++profileSaveVersion.current;
+    setProfileSave({ status: 'saving' });
+    const save = profileSaveQueue.current.then(() => saveExportProfile(nextProfile));
+    profileSaveQueue.current = save.catch(() => undefined);
+    void save
+      .then(() => {
+        if (profileSaveVersion.current === version) {
+          setProfileSave({ status: 'saved' });
+        }
+      })
+      .catch((error: unknown) => {
+        if (profileSaveVersion.current === version) {
+          setProfileSave({
+            status: 'error',
+            message:
+              error instanceof Error
+                ? `Could not save export defaults: ${error.message}`
+                : 'Could not save export defaults.',
+          });
+        }
+      });
+  }
+
   return (
     <main className="popup">
-      <header>
-        <p className="eyebrow">Vault export</p>
-        <h1>ChatGPT to Obsidian</h1>
+      <header className="popup-header">
+        <div>
+          <p className="eyebrow">Vault export</p>
+          <h1>ChatGPT to Obsidian</h1>
+        </div>
+        {isEmbedded && (
+          <button
+            type="button"
+            className="close-embedded"
+            aria-label="Close ChatGPT to Obsidian"
+            title="Close"
+            onClick={() => void closeEmbeddedPopup()}
+          >
+            ×
+          </button>
+        )}
       </header>
 
       {state.status === 'loading' && (
@@ -81,9 +181,72 @@ export function App() {
 
       {state.status === 'ready' && (
         <>
+          <section className="profile-fields" aria-labelledby="profile-heading">
+            <div>
+              <h2 id="profile-heading">Export defaults</h2>
+              <p>Saved locally in this browser extension.</p>
+            </div>
+            <label>
+              <span>Obsidian vault</span>
+              <input
+                value={profile.vault}
+                placeholder="My vault"
+                onChange={(event) => {
+                  persistProfile({ ...profile, vault: event.target.value });
+                }}
+              />
+            </label>
+            <label>
+              <span>Vault folder</span>
+              <input
+                value={profile.folder}
+                placeholder="Imports/ChatGPT (optional)"
+                onChange={(event) => {
+                  persistProfile({ ...profile, folder: event.target.value });
+                }}
+              />
+            </label>
+            <label>
+              <span>Default tags</span>
+              <input
+                value={tagsInput}
+                placeholder="chatgpt, reference"
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setTagsInput(value);
+                  persistProfile({ ...profile, defaultTags: parseTagsInput(value) });
+                }}
+              />
+              <small>
+                Comma-separated. Changes apply when the next snapshot is generated and do not
+                rewrite this Markdown preview.
+              </small>
+            </label>
+            {profileSave.status === 'saving' && (
+              <p className="profile-save-status" role="status">
+                Saving defaults…
+              </p>
+            )}
+            {profileSave.status === 'saved' && (
+              <p className="profile-save-status profile-save-success" role="status">
+                Defaults saved.
+              </p>
+            )}
+            {profileSave.status === 'error' && (
+              <p className="notice notice-error" role="alert">
+                {profileSave.message}
+              </p>
+            )}
+          </section>
+
           <label>
             <span>Note title</span>
-            <input defaultValue={state.title} />
+            <input
+              value={state.title}
+              onChange={(event) => {
+                setState({ ...state, title: event.target.value });
+              }}
+            />
           </label>
 
           {state.method && (
@@ -134,12 +297,29 @@ export function App() {
 
           <label>
             <span>Markdown preview</span>
-            <textarea defaultValue={state.markdown} spellCheck={false} />
+            <textarea
+              value={state.markdown}
+              spellCheck={false}
+              onChange={(event) => {
+                setState({ ...state, markdown: event.target.value });
+              }}
+            />
           </label>
         </>
       )}
     </main>
   );
+}
+
+async function closeEmbeddedPopup(): Promise<void> {
+  try {
+    const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+    if (tab?.id) {
+      await browser.tabs.sendMessage(tab.id, { type: TOGGLE_EMBEDDED_POPUP });
+    }
+  } catch {
+    // Closing removes this iframe, so the sender can disappear before the response resolves.
+  }
 }
 
 async function downloadStructuredDebugLog(
@@ -194,6 +374,7 @@ function diagnosticFilenameStem(title: string): string {
 }
 
 async function collectCurrentConversation(
+  tags: string[],
   onProgress: (progress: Omit<Extract<PopupState, { status: 'loading' }>, 'status'>) => void,
 ): Promise<PopupState> {
   const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
@@ -233,7 +414,7 @@ async function collectCurrentConversation(
       title: response.result.draft.title,
       markdown: renderConversationMarkdown(response.result.draft, {
         exportedAt: formatObsidianDateTime(new Date()),
-        tags: [...DEFAULT_EXPORT_PROFILE.defaultTags],
+        tags,
       }),
       warnings: response.result.warnings,
       method: response.result.method,
@@ -248,6 +429,14 @@ async function collectCurrentConversation(
   } finally {
     browser.runtime.onMessage.removeListener(progressListener);
   }
+}
+
+function copyDefaultProfile(): ExportProfile {
+  return {
+    vault: DEFAULT_EXPORT_PROFILE.vault,
+    folder: DEFAULT_EXPORT_PROFILE.folder,
+    defaultTags: [...DEFAULT_EXPORT_PROFILE.defaultTags],
+  };
 }
 
 function formatProgress(state: Extract<PopupState, { status: 'loading' }>): string {

@@ -13,9 +13,9 @@ The structured same-session Conversation graph is the primary collection method.
   - Validate ordinary and long Conversations in Opera, plus selected-branch, interruption, partial-content, and unsupported-content behavior with automated graph fixtures. Best-effort handling is enough for tool-using, deep-research, citation-heavy, attachment, and generated-image Conversations.
   - Define and test grouping rules when multiple backend nodes form one visible user or assistant message.
   - Detect zero messages, unpaired messages, interrupted or actively generating responses, and structured results that may be incomplete.
-  - Preserve recognized text from unsupported structured messages, omit unknown content, continue processing the branch, and show one informative partial-fidelity warning in the popup without adding warnings to exported Markdown.
+  - Preserve recognized text from unsupported structured messages, omit unknown content, continue processing the branch, and show one informative partial-fidelity warning in the editor without adding warnings to exported Markdown.
   - Add response-metadata fixtures for complete, partial, missing, and mismatched timestamps and model names.
-  - Prevent concurrent duplicate collection requests from the popup.
+  - Prevent concurrent duplicate collection requests from the editor.
   - Handle `429` and `Retry-After` without automatic retry loops; keep the fallback available.
   - Keep the latest raw Conversation response in content-script memory and provide a sensitive JSON download containing per-node parse outcomes. Never capture the session response or access token.
 
@@ -31,27 +31,26 @@ The structured same-session Conversation graph is the primary collection method.
   - Structured request, JSON, top-level schema, graph, or unusable-result failure leaves the existing best-effort visible-DOM export available.
   - Automated fixtures cover the structured shapes known and supported for the v1 release. Capturing and anonymizing broader real-world fixtures is deferred to the backlog.
 
-## P0 — Finish the popup and Export Profile
+## P0 — Finish the embedded editor and Export Profile
 
-- [ ] Make every v1 popup field controlled, persistent where appropriate, and connected to export behavior.
+- [x] Make every v1 editor field controlled, persistent where appropriate, and connected to export behavior.
 
   Required work:
 
   - Add controlled vault, folder, default tags, note title, and Markdown fields.
   - Persist one Export Profile containing vault, folder, and default tags in extension-local storage.
   - Use profile tags when rendering the initial Markdown snapshot.
-  - Use the current note title and edited Markdown when saving; do not read stale initial values or ignored DOM defaults.
-  - Add loading, collection progress, validation, saving, success, and actionable error states.
-  - Keep the popup responsive and usable with large Markdown snapshots.
+  - Keep the current note title and edited Markdown in controlled per-export state ready for the save action; do not rely on stale initial values or ignored DOM defaults.
+  - Add loading, collection progress, profile persistence status, and actionable collection or storage error states. Obsidian saving, success, and save-error states belong to the next task.
+  - Keep the embedded editor responsive and usable with large Markdown snapshots.
 
   Acceptance criteria:
 
   - Vault, folder, and default tags survive browser restart and extension reload.
-  - The Save action uses the currently displayed vault, folder, note title, and Markdown.
   - Per-export edits do not silently mutate the saved Export Profile unless the user explicitly changes a profile field.
   - Editing the note title does not unexpectedly rewrite Markdown frontmatter.
-  - Required fields are validated before saving and errors identify the field or action that needs attention.
-  - The popup clearly distinguishes collection warnings from save failures.
+  - Profile storage failures are visible without preventing best-effort Conversation collection.
+  - Profile normalization and storage behavior are covered without adding a browser-UI testing dependency.
 
 ## P0 — Save to Obsidian
 
@@ -63,18 +62,20 @@ The structured same-session Conversation graph is the primary collection method.
   - Implement background messaging that opens an `obsidian://new` URI.
   - Build the vault-relative file path from the configured folder and sanitized note title.
   - Handle YAML-sensitive characters, path separators, control characters, blank titles, and exceptionally long filenames safely.
-  - Add the Save button and connect it to the popup's current controlled values.
+  - Add the Save button and connect it to the embedded editor's current controlled values.
   - Use URI `content` only as a clipboard-failure fallback when the Markdown is short enough to be safe in a URI.
-  - Surface clipboard, URI launch, validation, and Obsidian-not-running failures in the popup as far as browser APIs allow.
+  - Surface clipboard, URI launch, validation, and Obsidian-not-running failures in the editor as far as browser APIs allow.
 
   Acceptance criteria:
 
   - Save creates a new note in the configured vault and folder using the editable note title.
+  - The Save action uses the currently displayed vault, folder, note title, and Markdown rather than initial or stale values.
   - The saved note contains the edited Markdown exactly as shown at the time of saving.
   - No overwrite, append, or merge flag is sent; Obsidian handles duplicate-name suffixing.
   - Silent mode is requested.
   - Long Conversations always use the clipboard path and are never placed in a URI query parameter.
   - Clipboard failure has a bounded URI-content fallback and never launches a truncated export.
+  - Required fields are validated before saving, errors identify the field or action requiring attention, and collection warnings remain distinct from save failures.
   - Duplicate titles, clipboard failure, invalid fields, and Obsidian-not-running behavior are tested.
   - The complete collection-to-save flow is manually validated in Opera and Obsidian on macOS with short and long private Conversations.
   - `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build` pass.

@@ -2,10 +2,12 @@ import { collectChatGptConversationByScrolling } from '../src/extraction/chatgpt
 import { collectChatGptStructuredConversation } from '../src/extraction/chatgpt-structured-conversation';
 import type { StructuredConversationDebugLog } from '../src/extraction/chatgpt-structured-conversation';
 import { singleFlightCollector } from '../src/extraction/single-flight-collector';
+import { toggleEmbeddedPopup } from '../src/embedded/embedded-popup';
 import type { CollectionResult } from '../src/domain/conversation-draft';
 import {
   COLLECTION_PROGRESS,
   isGetStructuredDebugLogMessage,
+  isToggleEmbeddedPopupMessage,
   isCollectConversationMessage,
   type GetStructuredDebugLogResponse,
   type CollectConversationResponse,
@@ -25,7 +27,16 @@ export default defineContentScript({
       return collectConversation(requestId);
     });
 
-    browser.runtime.onMessage.addListener((message, _sender, sendResponse): boolean | void => {
+    browser.runtime.onMessage.addListener((message, _sender, sendResponse): true | void => {
+      if (isToggleEmbeddedPopupMessage(message)) {
+        toggleEmbeddedPopup(
+          document,
+          browser.runtime.getURL('/popup.html?context=embedded'),
+        );
+        sendResponse({ ok: true });
+        return;
+      }
+
       if (isGetStructuredDebugLogMessage(message)) {
         const response: GetStructuredDebugLogResponse = structuredDebugLog
           ? { ok: true, log: structuredDebugLog }

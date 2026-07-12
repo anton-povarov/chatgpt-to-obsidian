@@ -45,15 +45,15 @@ The access token:
 - is never written to extension storage or the filesystem;
 - is never logged or included in error messages;
 - is never sent through extension runtime or tab messaging;
-- is never rendered in the popup, Markdown, diagnostics, or exports.
+- is never rendered in the editor, Markdown, diagnostics, or exports.
 
 The extension does not request browser cookie permissions. The session request relies on the already logged-in `chatgpt.com` browser session.
 
 ## Diagnostic capture
 
-The content script keeps the latest raw Conversation endpoint response in memory for explicit diagnostic download from the popup. It does not capture the `/api/auth/session` response, access token, request headers, or cookies. Starting another collection replaces the previous buffer; the buffer is lost when the content script is unloaded.
+The content script keeps the latest raw Conversation endpoint response in memory for explicit diagnostic download from the embedded editor. It does not capture the `/api/auth/session` response, access token, request headers, or cookies. Starting another collection replaces the previous buffer; the buffer is lost when the content script is unloaded.
 
-The downloaded JSON contains the complete Conversation response, including nodes outside the Visible Branch, plus a `messageDiagnostics` index keyed by node ID. Each node is marked `parsed`, `partial`, `skipped`, `ignored`, or `outside-visible-branch`, with reasons where applicable. Because this file can contain the full Conversation graph and personal content, the popup labels it sensitive and advises review before sharing.
+The downloaded JSON contains the complete Conversation response, including nodes outside the Visible Branch, plus a `messageDiagnostics` index keyed by node ID. Each node is marked `parsed`, `partial`, `skipped`, `ignored`, or `outside-visible-branch`, with reasons where applicable. Because this file can contain the full Conversation graph and personal content, the editor labels it sensitive and advises review before sharing.
 
 ## Visible Branch reconstruction
 
@@ -81,7 +81,7 @@ The structured parser currently accepts textual parts represented as:
 
 Empty text parts are ignored individually. Multiple non-empty parts retain their order and are separated by a blank line. A node containing only empty text is treated as empty rather than as an unsupported content type.
 
-For unrecognized message content, the collector keeps text represented by one of the supported shapes, omits the unknown fragments, and continues walking the Visible Branch. The popup shows one combined warning explaining how many messages retained readable text and how many were skipped, confirms that the rest of the Conversation was processed, and points to the diagnostic JSON for node-level details. Collection warnings are not inserted into generated Markdown. Unsupported message content alone does not trigger the DOM fallback.
+For unrecognized message content, the collector keeps text represented by one of the supported shapes, omits the unknown fragments, and continues walking the Visible Branch. The editor shows one combined warning explaining how many messages retained readable text and how many were skipped, confirms that the rest of the Conversation was processed, and points to the diagnostic JSON for node-level details. Collection warnings are not inserted into generated Markdown. Unsupported message content alone does not trigger the DOM fallback.
 
 Known internal content types that do not represent user-visible Conversation content are ignored without a fidelity warning. Currently this includes `model_editable_context`; the diagnostic JSON still records the node as `ignored` and explains why.
 
@@ -97,9 +97,9 @@ Structured collection falls back to DOM scrolling after:
 - non-JSON responses;
 - an unsupported top-level graph shape;
 - a missing node or parent cycle;
-- a graph containing no complete Exchanges.
+- a graph containing no complete Exchanges and no partial result worth reporting.
 
-The popup displays the selected method:
+The editor displays the selected method:
 
 - `ChatGPT structured conversation data`; or
 - `visible DOM scrolling`.
@@ -110,7 +110,7 @@ Fallback errors are sanitized. Response bodies and authentication data are not s
 
 No rate limit has been observed yet. The collector minimizes request volume by remaining entirely user-triggered and making only two reads per export: one session request and one current-Conversation request. It does not automatically retry a `429`; the existing behavior provides sanitized retry guidance and falls back to the DOM collector.
 
-Concurrent popup requests share one in-flight collection rather than issuing duplicate session or Conversation requests. A `429` is never retried automatically; a valid `Retry-After` value is reduced to bounded retry guidance before the existing DOM fallback runs.
+Concurrent editor requests share one in-flight collection rather than issuing duplicate session or Conversation requests. A `429` is never retried automatically; a valid `Retry-After` value is reduced to bounded retry guidance before the existing DOM fallback runs.
 
 ## Known gaps
 
@@ -124,7 +124,7 @@ Concurrent popup requests share one in-flight collection rather than issuing dup
 - `entrypoints/chatgpt.content.ts` — structured-first orchestration and DOM fallback.
 - `src/extraction/chatgpt-structured-conversation.ts` — authentication, fetch, graph traversal, validation, normalization, and metadata.
 - `src/extraction/chatgpt-structured-conversation.test.ts` — branch, cycle, authentication, metadata, and text-part fixtures.
-- `src/extraction/single-flight-collector.ts` — shares one in-flight collection across duplicate popup requests.
+- `src/extraction/single-flight-collector.ts` — shares one in-flight collection across duplicate editor requests.
 - `src/messaging/conversation.ts` — collection, progress, and diagnostic-download message contracts.
 - `src/extraction/chatgpt-conversation.ts` — DOM collector adapter.
 - `src/extraction/scroll-collector.ts` — bounded fallback scrolling.

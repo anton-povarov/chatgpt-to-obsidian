@@ -8,5 +8,11 @@ export default defineConfig({
     description: 'Export the current ChatGPT conversation to an Obsidian vault.',
     permissions: ['activeTab', 'clipboardWrite', 'storage'],
     host_permissions: ['https://chatgpt.com/*'],
+    web_accessible_resources: [
+      {
+        resources: ['popup.html', 'chunks/*', 'assets/*'],
+        matches: ['https://chatgpt.com/*'],
+      },
+    ],
   },
 });

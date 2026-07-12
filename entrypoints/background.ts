@@ -1,3 +1,12 @@
+import { TOGGLE_EMBEDDED_POPUP } from '../src/messaging/conversation';
+
 export default defineBackground(() => {
-  console.info('ChatGPT to Obsidian background service worker ready.');
+  void browser.action.setPopup({ popup: '' });
+
+  browser.action.onClicked.addListener((tab) => {
+    if (!tab.id || !tab.url?.startsWith('https://chatgpt.com/')) {
+      return;
+    }
+    void browser.tabs.sendMessage(tab.id, { type: TOGGLE_EMBEDDED_POPUP }).catch(() => undefined);
+  });
 });

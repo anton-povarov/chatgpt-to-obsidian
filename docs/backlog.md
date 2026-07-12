@@ -42,6 +42,6 @@ The visible-DOM scroll collector is good enough for v1. Do not harden its scroll
 ## Real-world structured Conversation fixtures
 
 - Ask the developer for anonymized real-world message fixtures when expanding structured content support. ChatGPT's private Conversation response format is undocumented and may change.
-- Use the popup's sensitive structured-JSON download to capture raw Conversation responses and per-node parse outcomes when a real discrepancy is observed.
+- Use the editor's sensitive structured-JSON download to capture raw Conversation responses and per-node parse outcomes when a real discrepancy is observed.
 - Add a checkbox to anonymise the data (remove conversation content, replacing it with "query N" and "response to query N")
 - Sanitize personal content and metadata before committing any captured response as a fixture.

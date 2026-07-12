@@ -27,8 +27,9 @@ npm run build
 3. Enable developer mode.
 4. Choose **Load unpacked**.
 5. Select `output/chrome-mv3` from this project.
+6. Reload any already-open ChatGPT tab so the new content script is active.
 
-The current popup extracts the visible ChatGPT conversation and shows an editable, high-fidelity Markdown preview. Saving to Obsidian is not implemented yet; see `TASKS.md` for the remaining work.
+Clicking the extension toolbar button opens a near-full-height editor inside the ChatGPT page. It extracts the Visible Branch and shows an editable, high-fidelity Markdown preview. Saving to Obsidian is not implemented yet; see `TASKS.md` for the remaining work.
 
 ## Design
 

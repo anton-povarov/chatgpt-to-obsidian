@@ -4,5 +4,6 @@
     "jsx": "react-jsx",
     "noUncheckedIndexedAccess": true,
     "strict": true
-  }
+  },
+  "exclude": ["tmp"]
 }
