@@ -1,7 +1,9 @@
 import type { CollectionResult } from '../domain/conversation-draft';
+import type { StructuredConversationDebugLog } from '../extraction/chatgpt-structured-conversation';
 
 export const COLLECT_CONVERSATION = 'collect-conversation' as const;
 export const COLLECTION_PROGRESS = 'collection-progress' as const;
+export const GET_STRUCTURED_DEBUG_LOG = 'get-structured-debug-log' as const;
 
 export interface CollectConversationMessage {
   type: typeof COLLECT_CONVERSATION;
@@ -22,6 +24,16 @@ export interface CollectionProgressMessage {
 export interface CollectConversationResponse {
   ok: boolean;
   result?: CollectionResult;
+  error?: string;
+}
+
+export interface GetStructuredDebugLogMessage {
+  type: typeof GET_STRUCTURED_DEBUG_LOG;
+}
+
+export interface GetStructuredDebugLogResponse {
+  ok: boolean;
+  log?: StructuredConversationDebugLog;
   error?: string;
 }
 
@@ -56,5 +68,16 @@ export function isCollectionProgressMessage(value: unknown): value is Collection
     typeof value.elapsedMs === 'number' &&
     'stablePasses' in value &&
     typeof value.stablePasses === 'number'
+  );
+}
+
+export function isGetStructuredDebugLogMessage(
+  value: unknown,
+): value is GetStructuredDebugLogMessage {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'type' in value &&
+    value.type === GET_STRUCTURED_DEBUG_LOG
   );
 }

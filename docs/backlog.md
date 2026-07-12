@@ -38,3 +38,10 @@ The visible-DOM scroll collector is good enough for v1. Do not harden its scroll
 - Recognize assembly listings, beginning with ARM64 instruction sequences, and wrap them in an appropriate fenced block.
 - Recognize small source examples, beginning with C, without converting ordinary prose to code.
 - Keep inference conservative, reversible in the editable preview, and thoroughly fixture-tested.
+
+## Real-world structured Conversation fixtures
+
+- Ask the developer for anonymized real-world message fixtures when expanding structured content support. ChatGPT's private Conversation response format is undocumented and may change.
+- Use the popup's sensitive structured-JSON download to capture raw Conversation responses and per-node parse outcomes when a real discrepancy is observed.
+- Add a checkbox to anonymise the data (remove conversation content, replacing it with "query N" and "response to query N")
+- Sanitize personal content and metadata before committing any captured response as a fixture.

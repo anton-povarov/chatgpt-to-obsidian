@@ -49,6 +49,12 @@ The access token:
 
 The extension does not request browser cookie permissions. The session request relies on the already logged-in `chatgpt.com` browser session.
 
+## Diagnostic capture
+
+The content script keeps the latest raw Conversation endpoint response in memory for explicit diagnostic download from the popup. It does not capture the `/api/auth/session` response, access token, request headers, or cookies. Starting another collection replaces the previous buffer; the buffer is lost when the content script is unloaded.
+
+The downloaded JSON contains the complete Conversation response, including nodes outside the Visible Branch, plus a `messageDiagnostics` index keyed by node ID. Each node is marked `parsed`, `partial`, `skipped`, `ignored`, or `outside-visible-branch`, with reasons where applicable. Because this file can contain the full Conversation graph and personal content, the popup labels it sensitive and advises review before sharing.
+
 ## Visible Branch reconstruction
 
 The response contains a `mapping` of nodes and a `current_node` identifier. The mapping may include regenerated or edited alternatives that are not currently selected.
@@ -75,6 +81,10 @@ The structured parser currently accepts textual parts represented as:
 
 Empty text parts are ignored individually. Multiple non-empty parts retain their order and are separated by a blank line. A node containing only empty text is treated as empty rather than as an unsupported content type.
 
+For unrecognized message content, the collector keeps text represented by one of the supported shapes, omits the unknown fragments, and continues walking the Visible Branch. The popup shows one combined warning explaining how many messages retained readable text and how many were skipped, confirms that the rest of the Conversation was processed, and points to the diagnostic JSON for node-level details. Collection warnings are not inserted into generated Markdown. Unsupported message content alone does not trigger the DOM fallback.
+
+Known internal content types that do not represent user-visible Conversation content are ignored without a fidelity warning. Currently this includes `model_editable_context`; the diagnostic JSON still records the node as `ignored` and explains why.
+
 Consecutive assistant text nodes following one query are grouped into the same Exchange. Available assistant `create_time` and model metadata produce the response timestamp, query-to-response delay, and model label.
 
 ## Validation and fallback
@@ -98,23 +108,24 @@ Fallback errors are sanitized. Response bodies and authentication data are not s
 
 ## Rate-limit posture
 
-No rate limit has been observed yet. The collector minimizes request volume by remaining entirely user-triggered and making only two reads per export: one session request and one current-Conversation request. It does not automatically retry a `429`; the existing behavior falls back to DOM and exposes the HTTP status in the warning.
+No rate limit has been observed yet. The collector minimizes request volume by remaining entirely user-triggered and making only two reads per export: one session request and one current-Conversation request. It does not automatically retry a `429`; the existing behavior provides sanitized retry guidance and falls back to the DOM collector.
 
-Future hardening should prevent concurrent duplicate structured requests and may honor `Retry-After` before another structured attempt.
+Concurrent popup requests share one in-flight collection rather than issuing duplicate session or Conversation requests. A `429` is never retried automatically; a valid `Retry-After` value is reduced to bounded retry guidance before the existing DOM fallback runs.
 
 ## Known gaps
 
-- Validate regenerated responses and edited prompts against `current_node` selection.
-- Validate interrupted or actively generating responses.
-- Add fixtures for tool calls, deep research, citations, attachments, generated images, and every observed `content_type`.
-- Determine when multiple backend nodes represent one visible logical message and formalize grouping rules.
-- Ensure unsupported structured content cannot be silently omitted; warn or use DOM fallback.
+- Validate more live regenerated responses and edited prompts against `current_node` selection.
+- Expand interrupted-generation detection when real payloads expose completion signals beyond `status: in_progress`, `status: streaming`, or `metadata.is_complete: false`.
+- Add native support for tool calls, deep research, citations, attachments, and generated images incrementally from anonymized real payloads. Until then, retain recognized text and warn about omitted content.
+- Revisit grouping rules when real payloads show visible message groupings not covered by consecutive assistant nodes.
 
 ## Relevant files
 
 - `entrypoints/chatgpt.content.ts` — structured-first orchestration and DOM fallback.
 - `src/extraction/chatgpt-structured-conversation.ts` — authentication, fetch, graph traversal, validation, normalization, and metadata.
 - `src/extraction/chatgpt-structured-conversation.test.ts` — branch, cycle, authentication, metadata, and text-part fixtures.
+- `src/extraction/single-flight-collector.ts` — shares one in-flight collection across duplicate popup requests.
+- `src/messaging/conversation.ts` — collection, progress, and diagnostic-download message contracts.
 - `src/extraction/chatgpt-conversation.ts` — DOM collector adapter.
 - `src/extraction/scroll-collector.ts` — bounded fallback scrolling.
 - `src/domain/conversation-draft.ts` — collection method and normalized draft boundary.

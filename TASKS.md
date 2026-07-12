@@ -6,18 +6,18 @@ The structured same-session Conversation graph is the primary collection method.
 
 ## P0 — Harden structured Conversation collection
 
-- [ ] Make structured collection safe and predictable across supported Conversations.
+- [x] Make structured collection safe and predictable across supported Conversations.
 
   Required work:
 
-  - Validate ordinary, long, regenerated, edited-prompt, interrupted, tool-using, deep-research, citation-heavy, attachment, and generated-image Conversations.
-  - Add anonymized JSON fixtures for supported content types and every live schema discrepancy that affects collection.
+  - Validate ordinary and long Conversations in Opera, plus selected-branch, interruption, partial-content, and unsupported-content behavior with automated graph fixtures. Best-effort handling is enough for tool-using, deep-research, citation-heavy, attachment, and generated-image Conversations.
   - Define and test grouping rules when multiple backend nodes form one visible user or assistant message.
   - Detect zero messages, unpaired messages, interrupted or actively generating responses, and structured results that may be incomplete.
-  - Make unsupported structured content trigger an explicit fidelity warning or visible-DOM fallback rather than silent loss.
+  - Preserve recognized text from unsupported structured messages, omit unknown content, continue processing the branch, and show one informative partial-fidelity warning in the popup without adding warnings to exported Markdown.
   - Add response-metadata fixtures for complete, partial, missing, and mismatched timestamps and model names.
   - Prevent concurrent duplicate collection requests from the popup.
   - Handle `429` and `Retry-After` without automatic retry loops; keep the fallback available.
+  - Keep the latest raw Conversation response in content-script memory and provide a sensitive JSON download containing per-node parse outcomes. Never capture the session response or access token.
 
   Acceptance criteria:
 
@@ -27,8 +27,9 @@ The structured same-session Conversation graph is the primary collection method.
   - Metadata is matched to the correct Exchange, missing values are omitted, and metadata failure never blocks content export.
   - Authentication material exists only in local variables during collection and is never logged, persisted, rendered, messaged between extension contexts, or exported.
   - One explicit collection performs at most one session request and one Conversation request, with no automatic retries.
-  - Any structured request, JSON, schema, graph, unsupported-content, or unusable-result failure leaves the existing best-effort visible-DOM export available.
-  - Automated fixtures cover every supported structured shape used for the v1 release.
+  - Unsupported message content produces a warned partial structured export; it does not trigger fallback by itself.
+  - Structured request, JSON, top-level schema, graph, or unusable-result failure leaves the existing best-effort visible-DOM export available.
+  - Automated fixtures cover the structured shapes known and supported for the v1 release. Capturing and anonymizing broader real-world fixtures is deferred to the backlog.
 
 ## P0 — Finish the popup and Export Profile
 

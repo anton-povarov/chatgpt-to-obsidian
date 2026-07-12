@@ -28,7 +28,7 @@ Verified automatically:
 
 - `npm run typecheck` passes.
 - `npm run lint` passes.
-- `npm test` passes: 24 tests across 6 files.
+- `npm test` passes: 38 tests across 7 files.
 - `npm run build` passes and produces `output/chrome-mv3`.
 
 ## Implemented behavior
@@ -46,6 +46,14 @@ Verified automatically:
 - Collection first requests the active ChatGPT session, holds its short-lived access token only in a local variable, and uses it for one read-only request for the Conversation ID in the current `/c/…` URL. Cookies, tokens, and authentication headers are never logged, persisted, messaged between extension contexts, rendered, or exported.
 - Structured Conversation graphs are validated, and only the ancestor path from `current_node` is normalized so hidden alternative branches are excluded.
 - Structured user and assistant text is paired into Exchanges with timestamps, query-to-response delay, and model metadata when present.
+- Consecutive assistant nodes are grouped into one Exchange in branch order; the final assistant node supplies response metadata.
+- Unsupported structured fragments no longer cause fallback or silent loss: recognized text is retained, unknown content is omitted, and one combined, diagnostic-oriented warning appears in the popup without modifying generated Markdown.
+- Unsupported messages with no recognized text are skipped with an explicit warning while later branch messages continue processing.
+- Known non-visible `model_editable_context` nodes are ignored without fidelity warnings and remain identified in diagnostic JSON.
+- Explicit in-progress structured messages and unpaired messages produce popup warnings without modifying generated Markdown.
+- Concurrent popup requests share one in-flight collection, preventing duplicate session and Conversation requests.
+- `429` responses are not retried automatically; sanitized `Retry-After` guidance is reported before DOM fallback.
+- The latest raw Conversation response is buffered in content-script memory without the session response or access token. The popup can download it as sensitive JSON with per-node parse outcomes and reasons.
 - Any request, JSON, schema, graph, or empty-result failure visibly falls back to the DOM scroll collector.
 - Message boundary: `[data-message-author-role]` elements only.
 - Roles collected: `user` and `assistant`.
@@ -168,7 +176,7 @@ Structured same-session Conversation data is the preferred source for the Visibl
 - Structured collection uses private, undocumented ChatGPT endpoints and schemas that may change without notice.
 - Structured collection is validated for ordinary and long text Conversations, but not yet for tool, research, citation, attachment, image, regenerated, edited-prompt, or in-progress response payloads.
 - The DOM fallback remains vulnerable to ChatGPT virtualization. Some especially long Conversations time out because lower message regions unload while scrolling upward; its timeout is currently 30 seconds.
-- Structured requests may eventually encounter rate limiting. The extension performs only one user-triggered session request and one Conversation request, does not retry automatically, and falls back to DOM on failure; explicit `429`/`Retry-After` handling remains open.
+- Structured requests may eventually encounter rate limiting. The extension performs at most one session request and one Conversation request per in-flight collection, shares that collection across concurrent popup requests, does not retry automatically, reports sanitized `Retry-After` guidance, and falls back to DOM on request failure.
 - Completeness detection does not yet recognize interrupted response generation beyond the existing unpaired-message warning.
 - Response timestamps, query-to-response delay, and model enrichment are available from structured messages when those fields are present; broader fixture and live coverage remains open.
 - No persisted vault, folder, tags, or image settings.

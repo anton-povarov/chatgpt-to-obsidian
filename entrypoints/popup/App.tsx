@@ -4,8 +4,10 @@ import { DEFAULT_EXPORT_PROFILE } from '../../src/domain/export-profile';
 import type { CollectionDiagnostics } from '../../src/domain/conversation-draft';
 import {
   COLLECT_CONVERSATION,
+  GET_STRUCTURED_DEBUG_LOG,
   isCollectionProgressMessage,
   type CollectConversationResponse,
+  type GetStructuredDebugLogResponse,
 } from '../../src/messaging/conversation';
 import {
   formatObsidianDateTime,
@@ -34,6 +36,9 @@ type PopupState =
 
 export function App() {
   const [state, setState] = useState<PopupState>({ status: 'loading' });
+  const [debugDownload, setDebugDownload] = useState<
+    { status: 'idle' | 'downloading' | 'success' } | { status: 'error'; message: string }
+  >({ status: 'idle' });
 
   useEffect(() => {
     let active = true;
@@ -98,6 +103,35 @@ export function App() {
 
           {state.diagnostics && <CollectionDiagnosticsView diagnostics={state.diagnostics} />}
 
+          <section className="debug-export">
+            <button
+              type="button"
+              disabled={debugDownload.status === 'downloading'}
+              onClick={() => {
+                setDebugDownload({ status: 'downloading' });
+                void downloadStructuredDebugLog(state.title).then(setDebugDownload);
+              }}
+            >
+              {debugDownload.status === 'downloading'
+                ? 'Preparing diagnostic JSON…'
+                : 'Download structured JSON (sensitive)'}
+            </button>
+            <p>
+              Includes the raw Conversation response, hidden branches, and parse outcomes. Review
+              before sharing.
+            </p>
+            {debugDownload.status === 'success' && (
+              <p className="download-success" role="status">
+                Diagnostic JSON downloaded.
+              </p>
+            )}
+            {debugDownload.status === 'error' && (
+              <p className="download-error" role="alert">
+                {debugDownload.message}
+              </p>
+            )}
+          </section>
+
           <label>
             <span>Markdown preview</span>
             <textarea defaultValue={state.markdown} spellCheck={false} />
@@ -106,6 +140,57 @@ export function App() {
       )}
     </main>
   );
+}
+
+async function downloadStructuredDebugLog(
+  conversationTitle: string,
+): Promise<{ status: 'success' } | { status: 'error'; message: string }> {
+  try {
+    const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) {
+      return { status: 'error', message: 'The active ChatGPT tab is no longer available.' };
+    }
+
+    const response = (await browser.tabs.sendMessage(tab.id, {
+      type: GET_STRUCTURED_DEBUG_LOG,
+    })) as GetStructuredDebugLogResponse;
+    if (!response.ok || !response.log) {
+      return {
+        status: 'error',
+        message: response.error ?? 'No structured Conversation response is available.',
+      };
+    }
+
+    const json = JSON.stringify(response.log, null, 2);
+    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${diagnosticFilenameStem(conversationTitle)}-structured.json`;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    return { status: 'success' };
+  } catch (error) {
+    return {
+      status: 'error',
+      message:
+        error instanceof Error
+          ? `Could not download diagnostic JSON: ${error.message}`
+          : 'Could not download diagnostic JSON.',
+    };
+  }
+}
+
+function diagnosticFilenameStem(title: string): string {
+  const stem = title
+    .normalize('NFKC')
+    .replace(/[\\/:*?"<>|]/g, '-')
+    .replace(/\p{Cc}/gu, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
+  return stem || 'chatgpt-conversation';
 }
 
 async function collectCurrentConversation(
