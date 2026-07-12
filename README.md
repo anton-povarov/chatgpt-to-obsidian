@@ -13,8 +13,8 @@ A local Chromium extension for exporting the current ChatGPT conversation as Mar
 
 ## Usage
 
-1. Open a conversation in ChatGPT and click the extension toolbar button.
-2. Review or edit the Markdown preview, title, tags, vault, and folder. Only the currently displayed conversation branch is included.
+1. Open a conversation on [chatgpt.com](https://chatgpt.com) and click the extension toolbar button.
+2. Review or edit the Markdown preview, title, tags, vault, and folder.
 3. Click **Save to Obsidian**.
 
 Each save creates a new snapshot. Leave Vault blank to use Obsidian's last active vault, or Folder blank to save to `ChatGPT`. Obsidian must be already installed.
