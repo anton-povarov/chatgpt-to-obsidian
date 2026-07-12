@@ -2,6 +2,23 @@
 
 A local Chromium extension for exporting the current ChatGPT conversation as Markdown to an Obsidian vault.
 
+## Installation
+
+1. Run `npm run build`.
+2. Open the browser's extension manager (`chrome://extensions` or `opera://extensions` etc.).
+3. Enable developer mode.
+4. Choose **Load unpacked**.
+5. Select `output/chrome-mv3` from this project.
+6. Reload any already-open ChatGPT tab so the new content script is active.
+
+## Usage
+
+1. Open a conversation in ChatGPT and click the extension toolbar button.
+2. Review or edit the Markdown preview, title, tags, vault, and folder. Only the currently displayed conversation branch is included.
+3. Click **Save to Obsidian**.
+
+Each save creates a new snapshot. Leave Vault blank to use Obsidian's last active vault, or Folder blank to save to `ChatGPT`. Obsidian must be already installed.
+
 ## Development
 
 Requirements: Node.js and npm.
@@ -19,22 +36,3 @@ npm run lint
 npm test
 npm run build
 ```
-
-## Load the unpacked extension
-
-1. Run `npm run build`.
-2. Open the browser's extension manager (`opera://extensions` or `chrome://extensions`).
-3. Enable developer mode.
-4. Choose **Load unpacked**.
-5. Select `output/chrome-mv3` from this project.
-6. Reload any already-open ChatGPT tab so the new content script is active.
-
-Clicking the extension toolbar button opens a near-full-height editor inside the ChatGPT page. It extracts the Visible Branch and shows an editable, high-fidelity Markdown body preview. Click **Save to Obsidian** to generate frontmatter from the current title and tags, prepend it to the displayed body, and send the complete document to Obsidian. A blank Vault uses Obsidian's last active vault, and a blank Folder defaults to `ChatGPT`. The extension uses the clipboard-backed Obsidian URI flow, so the Obsidian desktop app must be installed and registered to handle `obsidian://` links.
-
-## Design
-
-- [Current progress](./PROGRESS.md)
-- [Completed v1 tasks](./TASKS.md)
-- [Implementation plan](./docs/implementation-plan.md)
-- [Domain glossary](./CONTEXT.md)
-- [Architecture decisions](./docs/adr)
