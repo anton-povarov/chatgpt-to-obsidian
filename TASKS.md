@@ -1,5 +1,7 @@
 # V1 Tasks
 
+Status: feature-complete and manually validated on 2026-07-13.
+
 This file is the execution source of truth for reaching a feature-complete v1. Work top-to-bottom unless a defect blocks the current task. Work not required for v1 lives in [`docs/backlog.md`](docs/backlog.md).
 
 The structured same-session Conversation graph is the primary collection method. The existing visible-DOM scroll collector is a best-effort fallback and must not receive further hardening for v1 beyond fixes for regressions or release-blocking defects.
@@ -56,7 +58,7 @@ The structured same-session Conversation graph is the primary collection method.
 
 ## P0 — Save to Obsidian
 
-- [ ] Create a new Conversation Snapshot through the clipboard-backed Obsidian URI flow in ADR 0001.
+- [x] Create a new Conversation Snapshot through the clipboard-backed Obsidian URI flow in ADR 0001.
 
   Required work:
 

@@ -8,13 +8,13 @@ Build a personal, unpacked Chromium extension that exports the Current Conversat
 
 ## Current state
 
-The extension builds, loads in Opera, opens its editor as a near-full-height iframe overlay in the active ChatGPT tab, collects the Visible Branch from ChatGPT's structured same-session Conversation graph, falls back to automatic DOM scrolling when necessary, converts the result to Markdown, presents an editable Markdown body preview, and implements the clipboard-backed Obsidian URI save flow. The latest metadata/body UI revision still needs manual validation in Opera and Obsidian.
+V1 is feature-complete and manually validated. The extension builds, loads in Opera, opens its editor as a near-full-height iframe overlay in the active ChatGPT tab, collects the Visible Branch from ChatGPT's structured same-session Conversation graph, falls back to automatic DOM scrolling when necessary, converts the result to Markdown, presents an editable Markdown body preview, and creates the Conversation Snapshot in Obsidian through the clipboard-backed URI flow.
 
 Verified manually in Opera:
 
 - `output/chrome-mv3` loads as an unpacked extension.
 - The toolbar action opens and closes a near-full-height embedded editor on a private ChatGPT Conversation.
-- The embedded editor follows the ChatGPT viewport height and is no longer constrained by Chromium's action-popup height limit. This previously scrollable frame behavior has since been replaced by a fixed layout pending manual validation.
+- The embedded editor follows the ChatGPT viewport height, keeps its Save action visible in a fixed layout, and is no longer constrained by Chromium's action-popup height limit.
 - Editor-to-content-script messaging works through Chromium's `sendResponse` callback.
 - Conversation content is extracted without the sidebar or surrounding ChatGPT controls.
 - Queries render as Obsidian Query callouts.
@@ -24,6 +24,9 @@ Verified manually in Opera:
 - Authenticated structured collection succeeds without an OpenAI API key and is much faster than DOM scrolling.
 - A long Conversation previously affected by DOM virtualization exports completely through structured collection.
 - The embedded editor identifies whether structured data or DOM scrolling produced the result.
+- The compact vault, folder, title, and tags layout is usable without scrolling the embedded frame.
+- The complete collection-to-save flow creates and focuses snapshots in Obsidian on macOS, including edited title, tags, and Markdown body values.
+- Empty Vault and Folder defaults behave as intended, and repeated titles remain independent Conversation Snapshots.
 
 Verified automatically:
 
@@ -177,7 +180,7 @@ Structured same-session Conversation data is the preferred source for the Visibl
 
 ## Important files
 
-- `TASKS.md` — prioritized remaining work and acceptance criteria.
+- `TASKS.md` — completed v1 work and acceptance criteria.
 - `CONTEXT.md` — project glossary and canonical domain terms.
 - `docs/adr/` — architectural decision records, including superseded decisions retained as history.
 - `docs/implementation-plan.md` — historical product boundary and build order; it is not authoritative for current status or execution order.
@@ -214,7 +217,6 @@ Structured same-session Conversation data is the preferred source for the Visibl
 - Interrupted-generation detection is conservative and recognizes only explicit `in_progress`, `streaming`, or `is_complete: false` signals plus unpaired messages; other private-schema signals may be missed.
 - Response timestamps, query-to-response delay, and model enrichment are available from structured messages when those fields are present; broader fixture and live coverage remains open.
 - Vault and folder are persisted; current note-title, tags, and Markdown body edits remain per-export values and are used by the Save action without mutating profile defaults.
-- The Obsidian save flow is implemented but not yet manually validated in Opera and Obsidian on macOS.
 - No local image downloading. Remote image links may require ChatGPT authentication and may expire.
 - User-entered assembly and source examples that ChatGPT does not mark as code remain plain quoted text. Conservative code inference is deferred.
 - DOM selectors are intentionally narrow but depend on ChatGPT's current markup. Live fixtures should be added whenever a selector changes.
@@ -232,4 +234,4 @@ Structured same-session Conversation data is the preferred source for the Visibl
 3. Run `npm run typecheck && npm run lint && npm test && npm run build`.
 4. In Opera, load or reload `output/chrome-mv3` from `opera://extensions`.
 5. Reload the ChatGPT tab after every content-script rebuild. Reloading only the extension is insufficient for an already-open page.
-6. Manually validate **P0 — Save to Obsidian** in Opera and Obsidian with short and long private Conversations, including current title/tag frontmatter generation and the body-only preview, before marking the task complete.
+6. V1 is complete. Select follow-up work deliberately from `docs/backlog.md`; do not reopen completed v1 tasks unless a regression is found.

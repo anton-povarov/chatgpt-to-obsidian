@@ -34,7 +34,7 @@ Clicking the extension toolbar button opens a near-full-height editor inside the
 ## Design
 
 - [Current progress](./PROGRESS.md)
-- [Remaining tasks](./TASKS.md)
+- [Completed v1 tasks](./TASKS.md)
 - [Implementation plan](./docs/implementation-plan.md)
 - [Domain glossary](./CONTEXT.md)
 - [Architecture decisions](./docs/adr)
