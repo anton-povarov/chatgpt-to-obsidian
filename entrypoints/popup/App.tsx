@@ -1,0 +1,196 @@
+import { useEffect, useState } from 'react';
+
+import { DEFAULT_EXPORT_PROFILE } from '../../src/domain/export-profile';
+import type { CollectionDiagnostics } from '../../src/domain/conversation-draft';
+import {
+  COLLECT_CONVERSATION,
+  isCollectionProgressMessage,
+  type CollectConversationResponse,
+} from '../../src/messaging/conversation';
+import {
+  formatObsidianDateTime,
+  renderConversationMarkdown,
+} from '../../src/rendering/conversation-markdown';
+
+type PopupState =
+  | {
+      status: 'loading';
+      messagesCollected?: number;
+      pass?: number;
+      position?: number;
+      maximumPosition?: number;
+      elapsedMs?: number;
+      stablePasses?: number;
+    }
+  | { status: 'error'; message: string }
+  | {
+      status: 'ready';
+      title: string;
+      markdown: string;
+      warnings: string[];
+      diagnostics?: CollectionDiagnostics;
+    };
+
+export function App() {
+  const [state, setState] = useState<PopupState>({ status: 'loading' });
+
+  useEffect(() => {
+    let active = true;
+    void collectCurrentConversation((progress) => {
+      if (active) {
+        setState({ status: 'loading', ...progress });
+      }
+    }).then((nextState) => {
+      if (active) {
+        setState(nextState);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return (
+    <main className="popup">
+      <header>
+        <p className="eyebrow">Vault export</p>
+        <h1>ChatGPT to Obsidian</h1>
+      </header>
+
+      {state.status === 'loading' && (
+        <p className="status">
+          {state.messagesCollected === undefined
+            ? 'Preparing to read the current conversation…'
+            : formatProgress(state)}
+        </p>
+      )}
+
+      {state.status === 'error' && (
+        <section className="notice notice-error" role="alert">
+          <h2>Could not read this page</h2>
+          <p>{state.message}</p>
+        </section>
+      )}
+
+      {state.status === 'ready' && (
+        <>
+          <label>
+            <span>Note title</span>
+            <input defaultValue={state.title} />
+          </label>
+
+          {state.warnings.map((warning) => (
+            <p className="notice" role="status" key={warning}>
+              {warning}
+            </p>
+          ))}
+
+          {state.diagnostics && <CollectionDiagnosticsView diagnostics={state.diagnostics} />}
+
+          <label>
+            <span>Markdown preview</span>
+            <textarea defaultValue={state.markdown} spellCheck={false} />
+          </label>
+        </>
+      )}
+    </main>
+  );
+}
+
+async function collectCurrentConversation(
+  onProgress: (progress: Omit<Extract<PopupState, { status: 'loading' }>, 'status'>) => void,
+): Promise<PopupState> {
+  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+
+  if (!tab?.id || !tab.url?.startsWith('https://chatgpt.com/')) {
+    return { status: 'error', message: 'Open a conversation on chatgpt.com and try again.' };
+  }
+
+  const requestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const progressListener = (message: unknown): void => {
+    if (isCollectionProgressMessage(message) && message.requestId === requestId) {
+      onProgress({
+        messagesCollected: message.messagesCollected,
+        pass: message.pass,
+        position: message.position,
+        maximumPosition: message.maximumPosition,
+        elapsedMs: message.elapsedMs,
+        stablePasses: message.stablePasses,
+      });
+    }
+  };
+
+  browser.runtime.onMessage.addListener(progressListener);
+
+  try {
+    const response = (await browser.tabs.sendMessage(tab.id, {
+      type: COLLECT_CONVERSATION,
+      requestId,
+    })) as CollectConversationResponse;
+
+    if (!response.ok || !response.result) {
+      return { status: 'error', message: response.error ?? 'No conversation data was returned.' };
+    }
+
+    return {
+      status: 'ready',
+      title: response.result.draft.title,
+      markdown: renderConversationMarkdown(response.result.draft, {
+        exportedAt: formatObsidianDateTime(new Date()),
+        tags: [...DEFAULT_EXPORT_PROFILE.defaultTags],
+      }),
+      warnings: response.result.warnings,
+      diagnostics: response.result.diagnostics,
+    };
+  } catch (error) {
+    const details = error instanceof Error ? ` (${error.message})` : '';
+    return {
+      status: 'error',
+      message: `Reload the ChatGPT tab so the newly installed content script can connect.${details}`,
+    };
+  } finally {
+    browser.runtime.onMessage.removeListener(progressListener);
+  }
+}
+
+function formatProgress(state: Extract<PopupState, { status: 'loading' }>): string {
+  const percentage =
+    state.maximumPosition && state.position !== undefined
+      ? Math.round((state.position / state.maximumPosition) * 100)
+      : 0;
+  const elapsedSeconds = ((state.elapsedMs ?? 0) / 1000).toFixed(1);
+  const stability = state.stablePasses ? `, stable ${state.stablePasses}` : '';
+
+  return `Reading the current conversation… ${state.messagesCollected} messages, pass ${state.pass}, ${percentage}% of current scroll range, ${elapsedSeconds}s${stability}.`;
+}
+
+function CollectionDiagnosticsView({ diagnostics }: { diagnostics: CollectionDiagnostics }) {
+  const scroll = ({ position, maximum }: { position: number; maximum: number }) =>
+    `${Math.round(position)} / ${Math.round(maximum)}`;
+
+  return (
+    <details className="diagnostics" open>
+      <summary>Collection diagnostics</summary>
+      <dl>
+        <dt>Termination</dt>
+        <dd>{diagnostics.termination}</dd>
+        <dt>Elapsed / passes</dt>
+        <dd>
+          {(diagnostics.elapsedMs / 1000).toFixed(1)}s / {diagnostics.passes}
+        </dd>
+        <dt>Messages (initial / traversal / merged)</dt>
+        <dd>
+          {diagnostics.initialMessages} / {diagnostics.traversedMessages} /{' '}
+          {diagnostics.finalMessages}
+        </dd>
+        <dt>Scroll (initial)</dt>
+        <dd>{scroll(diagnostics.originalScroll)}</dd>
+        <dt>Scroll (last pass)</dt>
+        <dd>{scroll(diagnostics.lastScroll)}</dd>
+        <dt>Scroll (restored)</dt>
+        <dd>{scroll(diagnostics.restoredScroll)}</dd>
+      </dl>
+    </details>
+  );
+}
