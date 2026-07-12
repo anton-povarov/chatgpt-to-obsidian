@@ -172,6 +172,46 @@ describe('parseChatGptConversationGraph', () => {
     );
   });
 
+  it('replaces structured content references with their names', () => {
+    const maxwell =
+      'entity["people","James Clerk Maxwell","physicist"]';
+    const experiment =
+      'entity["historical_event","Michelson–Morley experiment","1887 physics experiment"]';
+    const payload = structuredSingleExchange({
+      content_type: 'text',
+      parts: [
+        `Bla bla ${maxwell} unified electricity and magnetism.`,
+        `More bla ${experiment}.`,
+      ],
+    });
+    Object.assign(payload.mapping.assistant.message, {
+      metadata: {
+        content_references: [
+          {
+            matched_text: maxwell,
+            start_idx: 369,
+            end_idx: 422,
+            alt: 'Maxwell',
+            name: 'James Clerk Maxwell',
+          },
+          {
+            matched_text: experiment,
+            start_idx: 1046,
+            end_idx: 1131,
+            alt: 'the experiment',
+            name: 'Michelson–Morley experiment',
+          },
+        ],
+      },
+    });
+
+    const result = parseChatGptConversationGraph(payload, 'https://chatgpt.com/c/id');
+
+    expect(result.draft.exchanges[0]?.responseMarkdown).toBe(
+      'Bla bla James Clerk Maxwell unified electricity and magnetism.\n\nMore bla Michelson–Morley experiment.',
+    );
+  });
+
   it('silently ignores a node containing only empty text components', () => {
     const payload = structuredSingleExchange({
       content_type: 'multimodal_text',

@@ -81,6 +81,8 @@ The structured parser currently accepts textual parts represented as:
 
 Empty text parts are ignored individually. Multiple non-empty parts retain their order and are separated by a blank line. A node containing only empty text is treated as empty rather than as an unsupported content type.
 
+ChatGPT content-reference markers in structured text are replaced with the corresponding `name` from `metadata.content_references`. Matching uses each reference's exact `matched_text`, so joining multiple text parts or encountering Unicode before a marker does not invalidate the replacement.
+
 For unrecognized message content, the collector keeps text represented by one of the supported shapes, omits the unknown fragments, and continues walking the Visible Branch. The editor shows one combined warning explaining how many messages retained readable text and how many were skipped, confirms that the rest of the Conversation was processed, and points to the diagnostic JSON for node-level details. Collection warnings are not inserted into generated Markdown. Unsupported message content alone does not trigger the DOM fallback.
 
 Known internal content types that do not represent user-visible Conversation content are ignored without a fidelity warning. Currently this includes `model_editable_context`; the diagnostic JSON still records the node as `ignored` and explains why.
