@@ -29,7 +29,7 @@ One user query paired with the ChatGPT response that follows it, represented as 
 _Avoid_: Turn, message pair
 
 **Query Callout**:
-The quoted Obsidian Question callout containing the user's complete query within an Exchange, with the query's first line used as the callout title.
+The quoted Obsidian Query callout containing the user's complete query within an Exchange, with the callout title being just "Query".
 _Avoid_: Query heading, prompt section
 
 **Content Fidelity**:

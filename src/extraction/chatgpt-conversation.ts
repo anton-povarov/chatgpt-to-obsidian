@@ -63,6 +63,7 @@ export async function collectChatGptConversationByScrolling(
 
   return {
     ...buildCollectionResult(document, outcome.items, collectionWarnings),
+    method: 'dom-scroll',
     diagnostics: {
       termination: outcome.diagnostics.termination,
       elapsedMs: outcome.diagnostics.elapsedMs,

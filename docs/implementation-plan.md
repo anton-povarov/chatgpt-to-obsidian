@@ -43,7 +43,7 @@ interface ExportProfile {
 1. **Conversation collector** — a content script identifies message containers, walks the Visible Branch, and performs an automatic scroll pass for virtualized conversations. It restores the original scroll position and reports incomplete collection.
 2. **Metadata enricher** — best-effort same-session lookup supplies timestamps and model names. Export remains available when enrichment fails.
 3. **Markdown converter** — targeted conversion preserves code blocks, quotations, tables, lists, LaTeX, citations, links, and other reasonable semantic structure. It excludes ChatGPT application chrome.
-4. **Snapshot renderer** — a pure module creates frontmatter and Exchange sections. Query lines become an Obsidian Question callout; response headings are lowered one level.
+4. **Snapshot renderer** — a pure module creates frontmatter and Exchange sections. Query lines become an Obsidian Query callout; response headings are lowered one level.
 5. **Popup** — an Obsidian Web Clipper-inspired React UI exposes editable title, vault, folder, tags, Markdown preview, export progress, and actionable warnings.
 6. **Vault bridge** — copies the final Markdown and invokes `obsidian://new` with file, vault, and silent parameters, with URI content as a clipboard-failure fallback.
 7. **Profile storage** — persists one profile in extension-local storage. Per-export edits do not require multiple templates.

@@ -8,7 +8,7 @@ Build a personal, unpacked Chromium extension that exports the Current Conversat
 
 ## Current state
 
-The extension builds, loads in Opera, connects its popup to the active ChatGPT tab, automatically scrolls through the Conversation to collect the Visible Branch, converts rendered messages to Markdown, and presents an editable Markdown preview. It does not yet save to Obsidian.
+The extension builds, loads in Opera, connects its popup to the active ChatGPT tab, collects the Visible Branch from ChatGPT's structured same-session Conversation graph, falls back to automatic DOM scrolling when necessary, converts the result to Markdown, and presents an editable Markdown preview. It does not yet save to Obsidian.
 
 Verified manually in Opera:
 
@@ -16,16 +16,19 @@ Verified manually in Opera:
 - The toolbar popup opens on a private ChatGPT conversation.
 - Popup-to-content-script messaging works through Chromium's `sendResponse` callback.
 - Conversation content is extracted without the sidebar or surrounding ChatGPT controls.
-- Queries render as Obsidian Question callouts.
+- Queries render as Obsidian Query callouts.
 - Multiline user queries retain their line breaks.
 - Exchange headings use only the first query line.
 - The human-readable export timestamp renders as `YYYY-MM-DD HH:mm:ss` in UTC.
+- Authenticated structured collection succeeds without an OpenAI API key and is much faster than DOM scrolling.
+- A long Conversation previously affected by DOM virtualization exports completely through structured collection.
+- The popup identifies whether structured data or DOM scrolling produced the result.
 
 Verified automatically:
 
 - `npm run typecheck` passes.
 - `npm run lint` passes.
-- `npm test` passes: 17 tests across 5 files.
+- `npm test` passes: 24 tests across 6 files.
 - `npm run build` passes and produces `output/chrome-mv3`.
 
 ## Implemented behavior
@@ -40,6 +43,10 @@ Verified automatically:
 
 ### Conversation collection
 
+- Collection first requests the active ChatGPT session, holds its short-lived access token only in a local variable, and uses it for one read-only request for the Conversation ID in the current `/c/…` URL. Cookies, tokens, and authentication headers are never logged, persisted, messaged between extension contexts, rendered, or exported.
+- Structured Conversation graphs are validated, and only the ancestor path from `current_node` is normalized so hidden alternative branches are excluded.
+- Structured user and assistant text is paired into Exchanges with timestamps, query-to-response delay, and model metadata when present.
+- Any request, JSON, schema, graph, or empty-result failure visibly falls back to the DOM scroll collector.
 - Message boundary: `[data-message-author-role]` elements only.
 - Roles collected: `user` and `assistant`.
 - Messages are paired in DOM order into Exchanges.
@@ -81,9 +88,8 @@ tags:
 
 # Exchange 1 — first line of the query
 
-> [!Question] first line of the query
->
-> remaining query lines
+> [!Query] 
+> lines of the query
 
 Response text…
 
@@ -91,7 +97,7 @@ Response text…
 ```
 
 - Each Exchange is one H1 section.
-- The first query line is used as both the Exchange title and Question callout title.
+- The first query line is used as the Exchange title.
 - Every remaining query line is prefixed with `>`; blank lines become `>`.
 - Response headings are lowered one level, except headings inside fenced code.
 - H6 is clamped to H6.
@@ -106,9 +112,13 @@ Runtime flow implemented so far:
 Popup
   → tabs.sendMessage
 ChatGPT content script
-  → bounded automatic scroll pass + progress messages
-  → role-marked DOM collection
-  → HTML-to-Markdown conversion
+  ├─ active-session access token (memory only)
+  │    → current Conversation graph
+  │    → current_node ancestor path
+  │    → structured text + response metadata normalization
+  └─ on failure: bounded DOM scroll pass + progress messages
+       → role-marked DOM collection
+       → HTML-to-Markdown conversion
   → ConversationDraft
 Popup
   → snapshot renderer
@@ -125,7 +135,7 @@ Edited Markdown
   → Obsidian vault note
 ```
 
-The content DOM is authoritative for the Visible Branch. Same-session ChatGPT data may later enrich model names and timestamps on a best-effort basis. Authentication cookies and tokens must never be exported or persisted.
+Structured same-session Conversation data is the preferred source for the Visible Branch and response metadata. The DOM collector remains the best-effort fallback because the private endpoint and schema are undocumented and rich content types are not yet fully normalized. Authentication cookies and tokens must never be logged, persisted, messaged between extension contexts, rendered, or exported.
 
 ## Important files
 
@@ -133,10 +143,12 @@ The content DOM is authoritative for the Visible Branch. Same-session ChatGPT da
 - `CONTEXT.md` — project glossary and canonical domain terms.
 - `docs/adr/` — accepted architectural decisions.
 - `docs/implementation-plan.md` — original plan and architecture outline; `TASKS.md` is now authoritative for execution order.
+- `docs/structured-conversation-collection.md` — current structured-data approach, authentication boundary, graph traversal, fallback behavior, and open questions.
 - `wxt.config.ts` — Manifest V3 metadata, permissions, host scope, and output directory.
 - `entrypoints/chatgpt.content.ts` — request listener and content-script boundary.
 - `entrypoints/popup/App.tsx` — popup state, active-tab messaging, and editable preview.
 - `src/extraction/chatgpt-conversation.ts` — role discovery and Exchange pairing.
+- `src/extraction/chatgpt-structured-conversation.ts` — experimental same-session graph fetch, Visible Branch traversal, validation, and normalization.
 - `src/extraction/scroll-collector.ts` — bounded scrolling, convergence, deduplication, progress, and restoration orchestration.
 - `src/markdown/html-to-markdown.ts` — DOM cleanup and Markdown conversion rules.
 - `src/rendering/conversation-markdown.ts` — frontmatter, callouts, metadata, and heading nesting.
@@ -147,15 +159,17 @@ The content DOM is authoritative for the Visible Branch. Same-session ChatGPT da
 ## Architectural decisions
 
 - `docs/adr/0001-write-vault-exports-through-obsidian-uri.md`: use clipboard-backed Obsidian URI rather than persistent filesystem permissions.
-- `docs/adr/0002-use-visible-dom-with-best-effort-session-metadata.md`: visible DOM for content, optional same-session metadata enrichment, no authentication-data persistence.
+- `docs/adr/0002-use-visible-dom-with-best-effort-session-metadata.md`: historical DOM-first decision; the structured-first spike now diverges from its source-authority choice but preserves its no-authentication-persistence boundary. Superseding it is intentionally deferred until structured fidelity is hardened.
 - `docs/adr/0003-build-with-wxt-react-and-typescript.md`: WXT, React, TypeScript, and Manifest V3.
 
 ## Known limitations
 
-- Automatic scrolling still needs live validation against long ChatGPT Conversations in Opera; selector or virtualization changes can still produce an incomplete snapshot, which is surfaced as a warning when the pass does not stabilize.
-- Some especially long Conversations still time out because ChatGPT unloads lower message regions while scrolling upward; the timeout is currently 30 seconds, and deeper virtualization handling is deferred for focused investigation.
+- Structured collection uses private, undocumented ChatGPT endpoints and schemas that may change without notice.
+- Structured collection is validated for ordinary and long text Conversations, but not yet for tool, research, citation, attachment, image, regenerated, edited-prompt, or in-progress response payloads.
+- The DOM fallback remains vulnerable to ChatGPT virtualization. Some especially long Conversations time out because lower message regions unload while scrolling upward; its timeout is currently 30 seconds.
+- Structured requests may eventually encounter rate limiting. The extension performs only one user-triggered session request and one Conversation request, does not retry automatically, and falls back to DOM on failure; explicit `429`/`Retry-After` handling remains open.
 - Completeness detection does not yet recognize interrupted response generation beyond the existing unpaired-message warning.
-- No response timestamps, query-to-response delay, or model enrichment yet.
+- Response timestamps, query-to-response delay, and model enrichment are available from structured messages when those fields are present; broader fixture and live coverage remains open.
 - No persisted vault, folder, tags, or image settings.
 - Note-title edits and Markdown edits are present only in the popup and are not saved.
 - No Save button or Obsidian URI bridge.
@@ -163,7 +177,7 @@ The content DOM is authoritative for the Visible Branch. Same-session ChatGPT da
 - User-entered assembly and source examples that ChatGPT does not mark as code remain plain quoted text. Conservative code inference is deferred.
 - DOM selectors are intentionally narrow but depend on ChatGPT's current markup. Live fixtures should be added whenever a selector changes.
 - The export timestamp is currently formatted in UTC with a human-readable separator. Revisit only if local-time semantics are explicitly requested.
-- The workspace was not a Git repository during the initial sessions; no commits or tags were created.
+- The project is now tracked in Git; the user committed the DOM-based baseline before the structured-data spike.
 
 ## Tooling notes
 
@@ -174,7 +188,7 @@ The content DOM is authoritative for the Visible Branch. Same-session ChatGPT da
 
 ## Continue in a new session
 
-1. Read `PROGRESS.md`, `TASKS.md`, `CONTEXT.md`, and the three ADRs.
+1. Read `PROGRESS.md`, `TASKS.md`, `CONTEXT.md`, `docs/structured-conversation-collection.md`, and the three ADRs.
 2. Run `npm install` if `node_modules` is absent.
 3. Run `npm run typecheck && npm run lint && npm test && npm run build`.
 4. In Opera, load or reload `output/chrome-mv3` from `opera://extensions`.

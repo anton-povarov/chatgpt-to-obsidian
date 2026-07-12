@@ -4,6 +4,17 @@ This file is the execution source of truth. Work top-to-bottom unless a newly di
 
 ## P0 — Complete conversation collection
 
+- [x] Add structured same-session Conversation collection with DOM scrolling fallback.
+
+  Implemented behavior:
+
+  - Read the Conversation ID from the current `/c/…` URL.
+  - Obtain a short-lived access token from the active ChatGPT session and keep it only in memory.
+  - Fetch the current Conversation graph and follow the `current_node` parent chain to reconstruct the Visible Branch.
+  - Normalize text messages and available response metadata into the existing `ConversationDraft` model.
+  - Fall back visibly to DOM scrolling after authentication, request, JSON, schema, graph, or empty-result failure.
+  - Never log, persist, render, message between extension contexts, or export authentication material.
+
 - [x] Implement automatic scrolling for long and virtualized Conversations.
 
   Acceptance criteria:
@@ -26,17 +37,34 @@ This file is the execution source of truth. Work top-to-bottom unless a newly di
 
 ## P0 — Best-effort response metadata
 
-- [ ] Investigate same-session ChatGPT conversation data without using an API key.
+- [x] Investigate same-session ChatGPT conversation data without using an API key.
 - [ ] Enrich each assistant response with response timestamp, query-to-response timestamp difference, and model name when available.
 
   Acceptance criteria:
 
-  - DOM content remains authoritative for the Visible Branch.
+  - Structured Conversation data is preferred; DOM content remains the fallback.
   - Metadata is matched to the correct visible Exchange.
   - Metadata failure never blocks content export.
   - Missing individual values are omitted.
   - No cookies, bearer tokens, session tokens, or authentication headers are logged, stored, rendered, or exported.
   - Add fixture tests for full, partial, missing, and mismatched metadata.
+
+## P0 — Structured collection hardening
+
+- [ ] Validate structured collection against ordinary, long, regenerated, edited-prompt, interrupted, tool-using, deep-research, citation-heavy, attachment, and generated-image Conversations.
+- [ ] Add anonymized JSON fixtures for every supported ChatGPT content type and every live schema discrepancy.
+- [ ] Define grouping rules for multiple backend nodes that form one visible user or assistant message.
+- [ ] Make unsupported structured content trigger an explicit fidelity warning or DOM fallback rather than silent loss.
+- [ ] Prevent concurrent duplicate structured requests and handle `429`/`Retry-After` without automatic retry loops.
+- [ ] Decide whether to supersede ADR 0002 after structured content reaches parity with DOM fidelity.
+
+  Acceptance criteria:
+
+  - Only the ancestor path from `current_node` is exported; hidden alternative branches remain excluded.
+  - Empty text components are ignored while non-empty components retain their order.
+  - Authentication data exists only in local variables for the duration of collection.
+  - One explicit export action performs at most one session request and one Conversation request.
+  - Any structured failure leaves the best-effort DOM export available.
 
 ## P0 — Single export profile and popup
 

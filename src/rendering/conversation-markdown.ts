@@ -1,5 +1,5 @@
-import type { ConversationDraft } from '../domain/conversation-draft';
-import type { Exchange } from '../domain/conversation-snapshot';
+import type { ConversationDraft } from "../domain/conversation-draft";
+import type { Exchange } from "../domain/conversation-snapshot";
 
 export interface RenderConversationOptions {
   exportedAt: string;
@@ -7,7 +7,7 @@ export interface RenderConversationOptions {
 }
 
 export function formatObsidianDateTime(date: Date): string {
-  return date.toISOString().slice(0, 19).replace('T', ' ');
+  return date.toISOString().slice(0, 19).replace("T", " ");
 }
 
 export function renderConversationMarkdown(
@@ -15,7 +15,7 @@ export function renderConversationMarkdown(
   options: RenderConversationOptions,
 ): string {
   const frontmatter = renderFrontmatter(draft, options);
-  const exchanges = draft.exchanges.map(renderExchange).join('\n\n');
+  const exchanges = draft.exchanges.map(renderExchange).join("\n\n");
 
   return `${frontmatter}\n\n${exchanges}`.trimEnd();
 }
@@ -26,25 +26,31 @@ function renderFrontmatter(
 ): string {
   const tags =
     options.tags.length === 0
-      ? 'tags: []'
-      : ['tags:', ...options.tags.map((tag) => `  - ${yamlString(tag)}`)].join('\n');
+      ? "tags: []"
+      : ["tags:", ...options.tags.map((tag) => `  - ${yamlString(tag)}`)].join(
+          "\n",
+        );
 
   return [
-    '---',
+    "---",
     `title: ${yamlString(draft.title)}`,
     `source: ${yamlString(draft.sourceUrl)}`,
     `exported: ${options.exportedAt}`,
     tags,
-    '---',
-  ].join('\n');
+    "---",
+  ].join("\n");
 }
 
 function renderExchange(exchange: Exchange, index: number): string {
   const queryLines = exchange.queryMarkdown.split(/\r?\n/);
-  const firstQueryLine = queryLines.shift()?.trim() || 'Query';
+  const firstQueryLine = queryLines.shift()?.trim() || "Query";
   const headingTitle = cleanHeadingTitle(firstQueryLine);
-  const queryBody = queryLines.map((line) => (line ? `> ${line}` : '>')).join('\n');
-  const callout = [`> [!Question] ${firstQueryLine}`, queryBody].filter(Boolean).join('\n');
+  const queryBody = queryLines
+    .map((line) => (line ? `> ${line}` : ">"))
+    .join("\n");
+  const callout = [`> [!Query]\n> ${firstQueryLine}`, queryBody]
+    .filter(Boolean)
+    .join("\n");
   const metadata = renderResponseMetadata(exchange);
   const response = demoteMarkdownHeadings(exchange.responseMarkdown);
 
@@ -55,31 +61,36 @@ function renderExchange(exchange: Exchange, index: number): string {
     response,
   ]
     .filter(Boolean)
-    .join('\n\n');
+    .join("\n\n");
 }
 
 function renderResponseMetadata(exchange: Exchange): string {
   const parts = [
     exchange.responseTimestamp,
-    exchange.responseDelaySeconds === undefined ? undefined : `${exchange.responseDelaySeconds} sec`,
+    exchange.responseDelaySeconds === undefined
+      ? undefined
+      : `${exchange.responseDelaySeconds} sec`,
     exchange.model,
   ].filter((part): part is string => Boolean(part));
 
-  return parts.length > 0 ? `*${parts.join(' · ')}*` : '';
+  return parts.length > 0 ? `*${parts.join(" · ")}*` : "";
 }
 
 export function demoteMarkdownHeadings(markdown: string): string {
-  let activeFence: { marker: '`' | '~'; length: number } | undefined;
+  let activeFence: { marker: "`" | "~"; length: number } | undefined;
 
   return markdown
     .split(/\r?\n/)
     .map((line) => {
       const fence = /^\s*(`{3,}|~{3,})/.exec(line)?.[1];
       if (fence) {
-        const marker = fence[0] as '`' | '~';
+        const marker = fence[0] as "`" | "~";
         if (!activeFence) {
           activeFence = { marker, length: fence.length };
-        } else if (activeFence.marker === marker && fence.length >= activeFence.length) {
+        } else if (
+          activeFence.marker === marker &&
+          fence.length >= activeFence.length
+        ) {
           activeFence = undefined;
         }
         return line;
@@ -89,18 +100,21 @@ export function demoteMarkdownHeadings(markdown: string): string {
         return line;
       }
 
-      return line.replace(/^(#{1,6})(\s+)/, (_match, hashes: string, spacing: string) => {
-        return `${'#'.repeat(Math.min(6, hashes.length + 1))}${spacing}`;
-      });
+      return line.replace(
+        /^(#{1,6})(\s+)/,
+        (_match, hashes: string, spacing: string) => {
+          return `${"#".repeat(Math.min(6, hashes.length + 1))}${spacing}`;
+        },
+      );
     })
-    .join('\n');
+    .join("\n");
 }
 
 function cleanHeadingTitle(value: string): string {
   return value
-    .replace(/^#+\s*/, '')
-    .replace(/!?(?:\[([^\]]*)\])\([^)]*\)/g, '$1')
-    .replace(/[*_~`]/g, '')
+    .replace(/^#+\s*/, "")
+    .replace(/!?(?:\[([^\]]*)\])\([^)]*\)/g, "$1")
+    .replace(/[*_~`]/g, "")
     .trim();
 }
 

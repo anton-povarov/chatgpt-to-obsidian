@@ -89,6 +89,12 @@ h2 {
   line-height: 1.5;
 }
 
+.collection-method {
+  margin: -8px 0 0;
+  color: #615b6f;
+  font-size: 12px;
+}
+
 .notice-error {
   border-color: #f0b9b9;
   background: #fff7f7;

@@ -28,6 +28,7 @@ type PopupState =
       title: string;
       markdown: string;
       warnings: string[];
+      method?: 'structured-data' | 'dom-scroll';
       diagnostics?: CollectionDiagnostics;
     };
 
@@ -79,6 +80,15 @@ export function App() {
             <span>Note title</span>
             <input defaultValue={state.title} />
           </label>
+
+          {state.method && (
+            <p className="collection-method">
+              Collection method:{' '}
+              {state.method === 'structured-data'
+                ? 'ChatGPT structured conversation data'
+                : 'visible DOM scrolling'}
+            </p>
+          )}
 
           {state.warnings.map((warning) => (
             <p className="notice" role="status" key={warning}>
@@ -141,6 +151,7 @@ async function collectCurrentConversation(
         tags: [...DEFAULT_EXPORT_PROFILE.defaultTags],
       }),
       warnings: response.result.warnings,
+      method: response.result.method,
       diagnostics: response.result.diagnostics,
     };
   } catch (error) {

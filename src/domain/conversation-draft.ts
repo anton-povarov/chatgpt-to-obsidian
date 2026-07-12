@@ -9,6 +9,7 @@ export interface ConversationDraft {
 export interface CollectionResult {
   draft: ConversationDraft;
   warnings: string[];
+  method?: 'structured-data' | 'dom-scroll';
   diagnostics?: CollectionDiagnostics;
 }
 
