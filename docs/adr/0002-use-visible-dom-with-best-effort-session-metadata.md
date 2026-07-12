@@ -1,3 +1,7 @@
+---
+status: superseded by ADR-0004
+---
+
 # Use Visible DOM with Best-Effort Session Metadata
 
-The Visible Branch and its rendered content will be extracted from ChatGPT's conversation message containers in the page DOM, excluding surrounding application chrome. The extension may read same-session ChatGPT conversation data to enrich responses with model names and timestamps, but content export must still succeed when that undocumented metadata source changes or is unavailable; authentication cookies and tokens are never exported or persisted.
+The Visible Branch and its rendered content were originally extracted from ChatGPT's conversation message containers in the page DOM, excluding surrounding application chrome. Same-session ChatGPT conversation data was limited to best-effort metadata enrichment. ADR-0004 supersedes this source-authority decision by making structured Conversation data primary and retaining visible-DOM scrolling as the fallback; the authentication privacy boundary remains unchanged.

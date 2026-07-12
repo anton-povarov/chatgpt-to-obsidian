@@ -13,7 +13,7 @@ The chronological exchange of user prompts and ChatGPT responses displayed in on
 _Avoid_: Chat, thread
 
 **Current Conversation**:
-The Conversation open in the active ChatGPT browser tab and eligible for a Vault Export. V1 does not collect Conversations from sidebar history.
+The Conversation open in the active ChatGPT browser tab and eligible for a Vault Export.
 _Avoid_: Selected conversation, active chat
 
 **Conversation Snapshot**:

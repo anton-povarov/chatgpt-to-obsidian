@@ -98,7 +98,7 @@ Response text…
 
 - Each Exchange is one H1 section.
 - The first query line is used as the Exchange title.
-- Every remaining query line is prefixed with `>`; blank lines become `>`.
+- Query is formatted as markdown callout with header "Query", query lines are prefixed with `>`; blank lines become `>`.
 - Response headings are lowered one level, except headings inside fenced code.
 - H6 is clamped to H6.
 - Response metadata is rendered only when available as `*timestamp · delay · model*`.
@@ -141,8 +141,8 @@ Structured same-session Conversation data is the preferred source for the Visibl
 
 - `TASKS.md` — prioritized remaining work and acceptance criteria.
 - `CONTEXT.md` — project glossary and canonical domain terms.
-- `docs/adr/` — accepted architectural decisions.
-- `docs/implementation-plan.md` — original plan and architecture outline; `TASKS.md` is now authoritative for execution order.
+- `docs/adr/` — architectural decision records, including superseded decisions retained as history.
+- `docs/implementation-plan.md` — historical product boundary and build order; it is not authoritative for current status or execution order.
 - `docs/structured-conversation-collection.md` — current structured-data approach, authentication boundary, graph traversal, fallback behavior, and open questions.
 - `wxt.config.ts` — Manifest V3 metadata, permissions, host scope, and output directory.
 - `entrypoints/chatgpt.content.ts` — request listener and content-script boundary.
@@ -159,8 +159,9 @@ Structured same-session Conversation data is the preferred source for the Visibl
 ## Architectural decisions
 
 - `docs/adr/0001-write-vault-exports-through-obsidian-uri.md`: use clipboard-backed Obsidian URI rather than persistent filesystem permissions.
-- `docs/adr/0002-use-visible-dom-with-best-effort-session-metadata.md`: historical DOM-first decision; the structured-first spike now diverges from its source-authority choice but preserves its no-authentication-persistence boundary. Superseding it is intentionally deferred until structured fidelity is hardened.
+- `docs/adr/0002-use-visible-dom-with-best-effort-session-metadata.md`: superseded DOM-first source-authority decision, retained as decision history.
 - `docs/adr/0003-build-with-wxt-react-and-typescript.md`: WXT, React, TypeScript, and Manifest V3.
+- `docs/adr/0004-prefer-structured-conversation-data-with-visible-dom-fallback.md`: use structured same-session Conversation data first and bounded visible-DOM scrolling on failure.
 
 ## Known limitations
 
@@ -176,13 +177,10 @@ Structured same-session Conversation data is the preferred source for the Visibl
 - No local image downloading. Remote image links may require ChatGPT authentication and may expire.
 - User-entered assembly and source examples that ChatGPT does not mark as code remain plain quoted text. Conservative code inference is deferred.
 - DOM selectors are intentionally narrow but depend on ChatGPT's current markup. Live fixtures should be added whenever a selector changes.
-- The export timestamp is currently formatted in UTC with a human-readable separator. Revisit only if local-time semantics are explicitly requested.
-- The project is now tracked in Git; the user committed the DOM-based baseline before the structured-data spike.
 
 ## Tooling notes
 
 - Development environment used: Node.js 25.8.2 and npm 11.11.1 on macOS arm64.
-- `npm install` once hit a transient esbuild post-install execution failure; retrying after verifying the cached arm64 binary succeeded.
 - npm reports advisories in the dependency tree. A full audit was intentionally deferred at the user's request.
 - `package-lock.json` is authoritative for exact dependency versions.
 

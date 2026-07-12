@@ -1,6 +1,6 @@
-# Implementation Plan
+# Historical Implementation Plan
 
-> Historical architecture and build-order document. See [`PROGRESS.md`](../PROGRESS.md) for implemented state and [`TASKS.md`](../TASKS.md) for the authoritative remaining work.
+> This records the original product boundary and intended build order. It is not a statement of current implementation status. See [`PROGRESS.md`](../PROGRESS.md) for implemented behavior, [`TASKS.md`](../TASKS.md) for authoritative remaining work, and [`structured-conversation-collection.md`](./structured-conversation-collection.md) for the structured-first collection design added after this plan.
 
 ## Product boundary
 
@@ -38,23 +38,23 @@ interface ExportProfile {
 }
 ```
 
-## Extension boundaries
+## Originally planned extension boundaries
 
-1. **Conversation collector** — a content script identifies message containers, walks the Visible Branch, and performs an automatic scroll pass for virtualized conversations. It restores the original scroll position and reports incomplete collection.
-2. **Metadata enricher** — best-effort same-session lookup supplies timestamps and model names. Export remains available when enrichment fails.
+1. **Conversation collector** — originally planned as a visible-DOM collector with automatic scrolling. The implementation now prefers the structured same-session Conversation graph and retains the bounded DOM collector as a fallback.
+2. **Response metadata** — originally planned as a separate enrichment step. The structured collector now normalizes available timestamps and model names together with content. Missing metadata never blocks export.
 3. **Markdown converter** — targeted conversion preserves code blocks, quotations, tables, lists, LaTeX, citations, links, and other reasonable semantic structure. It excludes ChatGPT application chrome.
 4. **Snapshot renderer** — a pure module creates frontmatter and Exchange sections. Query lines become an Obsidian Query callout; response headings are lowered one level.
 5. **Popup** — an Obsidian Web Clipper-inspired React UI exposes editable title, vault, folder, tags, Markdown preview, export progress, and actionable warnings.
 6. **Vault bridge** — copies the final Markdown and invokes `obsidian://new` with file, vault, and silent parameters, with URI content as a clipboard-failure fallback.
 7. **Profile storage** — persists one profile in extension-local storage. Per-export edits do not require multiple templates.
 
-## Build order
+## Original build order
 
 1. Scaffold WXT, React, TypeScript, Manifest V3, linting, and tests.
 2. Build fixture-driven extraction for ordinary ChatGPT exchanges.
 3. Add Markdown conversion rules and snapshot rendering tests.
-4. Add auto-scroll collection and incomplete-export detection.
-5. Add best-effort model and timestamp enrichment.
+4. Add auto-scroll collection and incomplete-export detection. Auto-scroll and several incomplete-result warnings are implemented; interrupted-generation detection remains open.
+5. Add best-effort model and timestamp enrichment. Basic structured extraction and rendering are implemented; coverage and live validation remain open.
 6. Build the editable popup and single-profile settings.
 7. Add clipboard and Obsidian URI export, then test in Opera and Chrome.
 8. Add image-link behavior. Keep remote linking as the default; treat local image transfer as a focused compatibility spike because binary vault writes are separate from note creation.

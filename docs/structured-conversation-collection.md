@@ -109,7 +109,6 @@ Future hardening should prevent concurrent duplicate structured requests and may
 - Add fixtures for tool calls, deep research, citations, attachments, generated images, and every observed `content_type`.
 - Determine when multiple backend nodes represent one visible logical message and formalize grouping rules.
 - Ensure unsupported structured content cannot be silently omitted; warn or use DOM fallback.
-- Decide whether structured data should fully supersede the DOM-first decision in ADR 0002 after fidelity parity is demonstrated.
 
 ## Relevant files
 
