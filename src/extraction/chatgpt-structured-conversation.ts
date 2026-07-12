@@ -3,6 +3,7 @@ import type {
   ConversationDraft,
 } from "../domain/conversation-draft";
 import type { Exchange } from "../domain/conversation-snapshot";
+import { structuredAssistantTextToMarkdown } from "./structured-assistant-text";
 
 interface StructuredMessage {
   role: "user" | "assistant";
@@ -459,7 +460,9 @@ function normalizeNodeMessage(
     reasons,
     message: {
       role,
-      markdown: textParts.join("\n\n").trim(),
+      markdown: structuredAssistantTextToMarkdown(
+        textParts.join("\n\n").trim(),
+      ),
       createdAt: toEpochSeconds(message.create_time),
       model:
         role === "assistant"

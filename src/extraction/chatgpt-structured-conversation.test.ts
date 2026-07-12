@@ -151,6 +151,27 @@ describe('parseChatGptConversationGraph', () => {
     expect(result.warnings).toEqual([]);
   });
 
+  it('normalizes ChatGPT TeX delimiters for Obsidian', () => {
+    const payload = structuredSingleExchange({
+      content_type: 'text',
+      parts: [
+        [
+          'Inline \\( x^2 \\).',
+          '',
+          '\\[',
+          '\\mathbf{A} \\cdot \\mathbf{B} = |\\mathbf{A}|\\,|\\mathbf{B}| \\cos \\theta',
+          '\\]',
+        ].join('\n'),
+      ],
+    });
+
+    const result = parseChatGptConversationGraph(payload, 'https://chatgpt.com/c/id');
+
+    expect(result.draft.exchanges[0]?.responseMarkdown).toBe(
+      'Inline $x^2$.\n\n$$\n\\mathbf{A} \\cdot \\mathbf{B} = |\\mathbf{A}|\\,|\\mathbf{B}| \\cos \\theta\n$$',
+    );
+  });
+
   it('silently ignores a node containing only empty text components', () => {
     const payload = structuredSingleExchange({
       content_type: 'multimodal_text',
