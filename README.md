@@ -4,7 +4,7 @@ A local Chromium extension for exporting the current ChatGPT conversation as Mar
 
 ## Installation
 
-1. Run `npm run build`.
+1. Run `npm install && npm run build`.
 2. Open the browser's extension manager (`chrome://extensions` or `opera://extensions` etc.).
 3. Enable developer mode.
 4. Choose **Load unpacked**.
