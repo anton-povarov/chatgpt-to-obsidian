@@ -110,6 +110,7 @@ jobs:
         shell: bash
         env:
           ARCHIVE_NAME: ${{ needs.build.outputs.archive_name }}
+          GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
