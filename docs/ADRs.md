@@ -9,3 +9,7 @@ The extension will use ChatGPT's private same-session Conversation graph as the 
 # [0005] Open the Editor UI as an Embedded Page Iframe
 
 The toolbar action will toggle a fixed, near-full-height extension iframe inside the active ChatGPT page, following Obsidian Web Clipper's Embedded behavior, rather than opening a Chromium action popup. This bypasses the action popup's hard 600-pixel height limit while keeping extension UI and page styles isolated; it requires exposing the built editor page only to `chatgpt.com` and coordinating open and close actions through the content script.
+
+# [0006] Publish Packed Extensions through GitHub Actions
+
+The repository will use GitHub Actions to run the TypeScript, lint, and test checks before producing WXT's unsigned Chromium Manifest V3 ZIP. Pull requests will verify that the ZIP builds without retaining it; pushes to `main` and manual runs will retain it as a directly downloadable workflow artifact for 30 days. A pushed `v<version>` tag must exactly match the version in `package.json`; after the same checks pass, the workflow will retain the ZIP and publish it as a permanent GitHub Release asset. Users must extract the ZIP and load its folder through Chromium's developer-mode **Load unpacked** flow because the package is not browser-store-signed.

@@ -1,0 +1,135 @@
+name: Build extension
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: extension-build-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
+jobs:
+  build:
+    name: Check and package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      archive_name: ${{ steps.package.outputs.archive_name }}
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+      package_version: ${{ steps.package.outputs.package_version }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build packed extension
+        run: npm run zip
+
+      - name: Verify package
+        id: package
+        shell: bash
+        run: |
+          package_version="$(node -p "require('./package.json').version")"
+          archive_name="chatgpt-to-obsidian-${package_version}-chrome.zip"
+          archive_path="output/${archive_name}"
+
+          test -f "${archive_path}"
+
+          echo "archive_name=${archive_name}" >> "${GITHUB_OUTPUT}"
+          echo "archive_path=${archive_path}" >> "${GITHUB_OUTPUT}"
+          echo "package_version=${package_version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Upload packed extension
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        id: upload
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ steps.package.outputs.archive_path }}
+          archive: false
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+
+    steps:
+      - name: Verify release tag
+        shell: bash
+        env:
+          PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          expected_tag="v${PACKAGE_VERSION}"
+          if [[ "${RELEASE_TAG}" != "${expected_tag}" ]]; then
+            echo "::error::Release tag ${RELEASE_TAG} does not match package version ${PACKAGE_VERSION}; expected ${expected_tag}."
+            exit 1
+          fi
+
+      - name: Download packed extension
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact_id }}
+          path: output
+          skip-decompress: true
+
+      - name: Publish release asset
+        shell: bash
+        env:
+          ARCHIVE_NAME: ${{ needs.build.outputs.archive_name }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          archive_path="output/${ARCHIVE_NAME}"
+          test -f "${archive_path}"
+
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            asset_exists=false
+            while IFS= read -r asset_name; do
+              if [[ "${asset_name}" == "${ARCHIVE_NAME}" ]]; then
+                asset_exists=true
+                break
+              fi
+            done < <(gh release view "${RELEASE_TAG}" --json assets --jq '.assets[].name')
+
+            if [[ "${asset_exists}" == "false" ]]; then
+              gh release upload "${RELEASE_TAG}" "${archive_path}"
+            fi
+          else
+            gh release create "${RELEASE_TAG}" "${archive_path}" \
+              --generate-notes \
+              --verify-tag
+          fi
