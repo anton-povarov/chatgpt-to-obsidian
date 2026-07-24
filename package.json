@@ -9,6 +9,7 @@
     "zip": "wxt zip",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
+    "postinstall": "wxt prepare",
     "test": "vitest run",
     "test:watch": "vitest"
   },
