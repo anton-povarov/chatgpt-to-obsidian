@@ -7,10 +7,22 @@ import {
 export default defineBackground(() => {
   browser.action.onClicked.addListener((tab) => {
     if (!tab.id || !tab.url?.startsWith('https://chatgpt.com/')) {
+      if (tab.id) {
+        void openUnsupportedPopup(tab.id, tab.windowId).catch(() => undefined);
+      }
       return;
     }
     void browser.tabs.sendMessage(tab.id, { type: TOGGLE_EMBEDDED_POPUP }).catch(() => undefined);
   });
+
+  async function openUnsupportedPopup(tabId: number, windowId?: number): Promise<void> {
+    await browser.action.setPopup({ tabId, popup: '/unsupported.html' });
+    try {
+      await browser.action.openPopup(windowId === undefined ? {} : { windowId });
+    } finally {
+      await browser.action.setPopup({ tabId, popup: '' });
+    }
+  }
 
   browser.runtime.onMessage.addListener((message, _sender, sendResponse): true | void => {
     if (!isOpenObsidianUriMessage(message)) {

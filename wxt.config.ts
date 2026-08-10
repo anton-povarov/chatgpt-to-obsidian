@@ -6,6 +6,7 @@ export default defineConfig({
   manifest: {
     name: 'ChatGPT to Obsidian',
     description: 'Export the current ChatGPT conversation to an Obsidian vault.',
+    minimum_chrome_version: '127',
     action: {
       default_title: 'ChatGPT to Obsidian',
     },
