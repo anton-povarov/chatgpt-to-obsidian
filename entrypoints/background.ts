@@ -5,8 +5,6 @@ import {
 } from '../src/messaging/obsidian';
 
 export default defineBackground(() => {
-  void browser.action.setPopup({ popup: '' });
-
   browser.action.onClicked.addListener((tab) => {
     if (!tab.id || !tab.url?.startsWith('https://chatgpt.com/')) {
       return;

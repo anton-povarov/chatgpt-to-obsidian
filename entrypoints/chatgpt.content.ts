@@ -31,7 +31,7 @@ export default defineContentScript({
       if (isToggleEmbeddedPopupMessage(message)) {
         toggleEmbeddedPopup(
           document,
-          browser.runtime.getURL('/popup.html?context=embedded'),
+          browser.runtime.getURL('/editor.html?context=embedded'),
         );
         sendResponse({ ok: true });
         return;
