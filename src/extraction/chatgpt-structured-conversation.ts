@@ -283,7 +283,9 @@ function formatUnsupportedContentWarning(
 
 export function extractConversationId(url: string): string | undefined {
   try {
-    const match = /^\/c\/([^/?#]+)\/?$/.exec(new URL(url).pathname);
+    const match = /^\/(?:g\/[^/]+\/)?c\/([^/?#]+)\/?$/.exec(
+      new URL(url).pathname,
+    );
     return match?.[1] ? decodeURIComponent(match[1]) : undefined;
   } catch {
     return undefined;

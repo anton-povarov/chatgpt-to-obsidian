@@ -27,6 +27,8 @@ docs/
 	backlog.md - ideas for further development
 	structured-conversation-collection.md - implementation details for the json api collection method
 entrypoints/ - browser facing part of the extension
+	editor/ - main editor iframe
+	...
 src/
 	domain/ - domain model
 	extraction/ - extracting domain data from json api or dom scrolling

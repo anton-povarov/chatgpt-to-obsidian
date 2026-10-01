@@ -473,7 +473,13 @@ describe('parseChatGptConversationGraph', () => {
 });
 
 describe('collectChatGptStructuredConversation', () => {
-  it('requests only the current Conversation with ambient credentials', async () => {
+  it.each([
+    ['https://chatgpt.com/c/conversation-id', 'conversation-id'],
+    [
+      'https://chatgpt.com/g/g-p-6abe6c38a06081918a752d54acb4e802-ai-platform-org/c/6abe44b5-1f2c-83eb-9e67-36ea20154610',
+      '6abe44b5-1f2c-83eb-9e67-36ea20154610',
+    ],
+  ])('requests only the current Conversation with ambient credentials from %s', async (sourceUrl, conversationId) => {
     const fetchFunction = vi.fn(async (input: RequestInfo | URL) => {
       const url = input.toString();
       const body = url.endsWith('/api/auth/session')
@@ -484,7 +490,7 @@ describe('collectChatGptStructuredConversation', () => {
         headers: { 'content-type': 'application/json' },
       });
     });
-    const location = new URL('https://chatgpt.com/c/conversation-id');
+    const location = new URL(sourceUrl);
     const fakeDocument = { location } as unknown as Document;
     const captureDebugLog = vi.fn();
 
@@ -505,7 +511,7 @@ describe('collectChatGptStructuredConversation', () => {
     );
     expect(fetchFunction).toHaveBeenNthCalledWith(
       2,
-      new URL('https://chatgpt.com/backend-api/conversation/conversation-id'),
+      new URL(`https://chatgpt.com/backend-api/conversation/${conversationId}`),
       {
         method: 'GET',
         credentials: 'include',
@@ -516,12 +522,13 @@ describe('collectChatGptStructuredConversation', () => {
       },
     );
     expect(result.method).toBe('structured-data');
+    expect(result.draft.sourceUrl).toBe(sourceUrl);
     expect(result.draft.exchanges).toHaveLength(2);
     expect(captureDebugLog).toHaveBeenCalledOnce();
     const debugLog = captureDebugLog.mock.calls[0]?.[0];
     expect(debugLog).toMatchObject({
       formatVersion: 1,
-      sourceUrl: 'https://chatgpt.com/c/conversation-id',
+      sourceUrl,
       currentNode: 'assistant-2',
       conversationResponse: conversationPayload,
     });
@@ -643,10 +650,28 @@ describe('collectChatGptStructuredConversation', () => {
 });
 
 describe('extractConversationId', () => {
-  it('accepts only ChatGPT Conversation routes', () => {
-    expect(extractConversationId('https://chatgpt.com/c/abc-123')).toBe('abc-123');
-    expect(extractConversationId('https://chatgpt.com/')).toBeUndefined();
-    expect(extractConversationId('not a URL')).toBeUndefined();
+  it.each([
+    'https://chatgpt.com/c/abc-123',
+    'https://chatgpt.com/c/abc-123/?model=test#message',
+    'https://chatgpt.com/g/g-p-project-title/c/abc-123',
+    'https://chatgpt.com/g/g-p-project-title/c/abc-123/?model=test#message',
+    'https://chatgpt.com/g/g-p-project-title/c/abc%2D123',
+  ])('extracts the Conversation ID from %s', (url) => {
+    expect(extractConversationId(url)).toBe('abc-123');
+  });
+
+  it.each([
+    'https://chatgpt.com/',
+    'https://chatgpt.com/g/g-p-project-title',
+    'https://chatgpt.com/g/g-p-project-title/project',
+    'https://chatgpt.com/g/g-p-project-title/c/',
+    'https://chatgpt.com/g//c/abc-123',
+    'https://chatgpt.com/g/g-p-project-title/c/abc-123/extra',
+    'https://chatgpt.com/other/c/abc-123',
+    'https://chatgpt.com/c/%ZZ',
+    'not a URL',
+  ])('rejects a URL without a valid Conversation route: %s', (url) => {
+    expect(extractConversationId(url)).toBeUndefined();
   });
 });
 

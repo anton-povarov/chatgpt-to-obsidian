@@ -15,7 +15,8 @@ In manual validation, structured collection exported a long Conversation complet
 ## Runtime flow
 
 ```text
-Current chatgpt.com/c/{conversation-id} page
+Current chatgpt.com/c/{conversation-id}
+  or chatgpt.com/g/{project}/c/{conversation-id} page
   → GET /api/auth/session with ambient browser cookies
   → hold accessToken in a local variable
   → GET /backend-api/conversation/{conversation-id}
@@ -34,6 +35,8 @@ Any failure
 ```
 
 One explicit collection performs at most one session request and one Conversation request. There is no polling, sidebar-history collection, batch collection, or automatic retry loop.
+
+For project Conversations, the collector extracts the Conversation ID after `/c/` and preserves the full project URL as the Conversation Snapshot source.
 
 ## Authentication and privacy boundary
 
