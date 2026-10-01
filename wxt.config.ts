@@ -3,6 +3,12 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   outDir: 'output',
   modules: ['@wxt-dev/module-react'],
+  vite: () => ({
+    build: {
+      // Chromium can reject extension module preloads with a cross-world mismatch.
+      modulePreload: false,
+    },
+  }),
   manifest: {
     name: 'ChatGPT to Obsidian',
     description: 'Export the current ChatGPT conversation to an Obsidian vault.',
